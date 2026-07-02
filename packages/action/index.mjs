@@ -12,6 +12,11 @@
 // 3 unresolved source. Precedence 2 > 3 > 1.
 import { appendFileSync, readFileSync, existsSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
+
+// Workspace-relative path with FORWARD slashes regardless of OS — GitHub
+// annotation file= properties and markdown links require POSIX separators
+// (a backslash path silently fails to attach to the file on Windows runners).
+function relPosix(from, to) { return relative(from, to).replace(/\\/g, '/'); }
 import {
   ConfigError,
   findConfigPath, loadConfig, CONFIG_FILENAME,
@@ -81,7 +86,7 @@ function summaryMarkdown({ graph, verdict, byId, workspace }) {
     L.push('|---|---|---|---|---|');
     for (const s of graph.suspects) {
       const rec = byId && byId[s.node];
-      const file = rec ? relative(workspace, rec.path) : '';
+      const file = rec ? relPosix(workspace, rec.path) : '';
       L.push(`| \`${s.node}\`${file ? ` ([file](${file}))` : ''} | \`${s.ingredient}\` | \`${fp8(s.expected)}\` | \`${fp8(s.actual)}\` | \`traceweave reconcile ${s.node}\` |`);
     }
     L.push('');
@@ -190,7 +195,7 @@ async function main() {
   // Annotations: suspects on the downstream file's reconciled entry line.
   for (const s of graph.suspects) {
     const rec = byId[s.node];
-    const file = rec ? relative(workspace, rec.path) : null;
+    const file = rec ? relPosix(workspace, rec.path) : null;
     annotate({
       file, line: rec ? reconciledLine(rec.path, s.ingredient) : 1,
       title: 'Traceweave: suspect ingredient link',
@@ -203,7 +208,7 @@ async function main() {
   for (const g of verdict.gaps) {
     const rec = g.id ? byId[g.id] : null;
     annotate({
-      file: rec ? relative(workspace, rec.path) : null,
+      file: rec ? relPosix(workspace, rec.path) : null,
       line: rec ? 1 : null,
       title: 'Traceweave: coverage gap',
       message: `${g.type}${g.id ? ` (${g.id})` : ''}: ${g.reason}`,

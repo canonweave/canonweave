@@ -10,6 +10,8 @@ permissions: read-all
 
 jobs:
   analysis:
+    # Code scanning / Scorecard need a public repo (or GHAS); skip while private.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     permissions:
       security-events: write   # upload SARIF to code scanning
