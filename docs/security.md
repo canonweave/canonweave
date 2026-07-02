@@ -30,15 +30,16 @@ Layers, per design section 7:
 5. worst case of a malicious artifact edit = a bad *proposal*, the same blast
    radius as any malicious PR.
 
-WS1 ships only the `template` (deterministic, offline), `cmd` (local CLI), and
-`none` (brief-only) backends. Direct `anthropic` / `openai` API backends ship
-in WS3 with the same layering; gate mode never needs any secret.
+Backends: `template` (deterministic, offline), `cmd` (local CLI), `none`
+(brief-only), and the WS3 zero-dep API backends `anthropic` / `openai` — same
+layering, key from the consumer's env only (docs/reconcile.md documents the
+full threat model). Gate mode never needs any secret.
 
 ## Secretless gate
 
 `build` / `check` / `gate` need **no credentials** — resolution is repo files,
-committed caches, and plain HTTP GET for `url` sources. Only the WS3 reconcile
-workflow will ever see a model key, and only as the user's own repo secret.
+committed caches, and plain HTTP GET for `url` sources. Only the reconcile
+workflow ever sees a model key, and only as the user's own repo secret.
 
 ## Release engineering (WS5 — AIW-230)
 

@@ -91,9 +91,12 @@ Clearing only updates the link's fingerprint, never the artifact body — so
 nothing cascades.
 
 The default drafter backend is `template` (deterministic stub, no network).
-Point `drafter.backend: cmd` at any local CLI, or wait for the `anthropic` /
-`openai` backends (WS3). Every AI draft lands as a reviewable proposal —
-nothing is ever auto-applied without a human step.
+Point `drafter.backend: cmd` at any local CLI, or use the zero-dep API
+backends — `anthropic` (Messages API) / `openai` (any OpenAI-compatible
+`base_url`) with the key in an environment variable, never in config. In CI,
+the reconcile workflow turns drafts into idempotent fix PRs whose merge IS
+the review: [reconcile.md](reconcile.md). Every AI draft lands as a
+reviewable proposal — nothing is ever auto-applied without a human step.
 
 ## 5. Gate your CI (three minutes)
 

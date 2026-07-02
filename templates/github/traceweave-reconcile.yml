@@ -1,0 +1,47 @@
+# Traceweave reconcile workflow — copy into .github/workflows/ of any repo
+# that runs the traceweave gate (design section 7: the AI plane).
+#
+# When a push to the default branch leaves ingredient links suspect, this
+# drafts the corrected downstream artifacts and opens ONE idempotent PR per
+# suspect downstream (branch traceweave/reconcile/<id>--<fp8>). Re-runs
+# update the open PR; a further upstream change closes the stale PR and
+# opens a linked successor. MERGING A RECONCILE PR IS THE REVIEW.
+#
+# The drafter API key comes from YOUR repo secret (never the traceweave
+# project's infrastructure). With no key configured the run degrades to
+# briefs in the job summary — nothing breaks. Threat model: docs/reconcile.md.
+name: traceweave-reconcile
+
+on:
+  push:
+    branches: [main]        # adjust to your default branch
+  workflow_dispatch:
+  # schedule:               # optional: nightly reconcile sweep
+  #   - cron: '47 2 * * *'
+
+concurrency:
+  group: traceweave-reconcile
+  cancel-in-progress: false  # runs queue; branch names make re-runs idempotent
+
+permissions:
+  contents: write           # push the reconcile branches
+  pull-requests: write      # open/update/close the reconcile PRs
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3 — pin actions by SHA
+      # Same-repo form (the traceweave monorepo reconciling itself):
+      - uses: ./packages/reconcile-action
+      # Cross-repo form once published (WS5) — pin by SHA, not tag:
+      # - uses: traceweavehq/traceweave/packages/reconcile-action@<pinned-sha>
+        with:
+          config: ''        # empty = auto-discover traceweave.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Drafter key for the anthropic backend (repo secret; optional —
+          # without it, runs produce briefs instead of drafts):
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # For an OpenAI-compatible endpoint (drafter.backend: openai):
+          # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

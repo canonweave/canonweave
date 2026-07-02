@@ -9,8 +9,16 @@
 //               hardcoded local-agent path.
 //   none      — never draft; always emit a reconcile BRIEF (teams that want
 //               human-only redrafts).
-// anthropic / openai (direct zero-dep API backends) are designed in section 7
-// and ship in WS3 (AIW-232); config.mjs rejects them today with a clear error.
+// WS3 backends (AIW-232, design section 7 — the AI plane):
+//   anthropic — direct Messages API call. Zero-dep (global fetch), single
+//               completion, NO tools. Key from env (drafter.api_key_env,
+//               default ANTHROPIC_API_KEY) — never config, never logged.
+//   openai    — OpenAI-compatible chat completions (drafter.base_url) for
+//               self-hosted / proxy endpoints. Same key + defense rules.
+//
+// Injection defense (layered, section 7): single completion, no tool access,
+// pinned instruction, input size caps (DRAFTER_INPUT_CAP below), fence and
+// preamble stripping, and the human PR gate as the backstop.
 //
 // Request: { downstream:{id,type,title,build},
 //            upstream:{id,type,title,fingerprintOld,fingerprintNew,content},
@@ -18,9 +26,21 @@
 // Result:  { ok, kind: 'draft'|'brief', backend, content, error }
 import { execFileSync } from 'node:child_process';
 
+// Input size cap per content block (injection defense: a hostile artifact
+// cannot stuff the context). Characters, not tokens — deterministic.
+export const DRAFTER_INPUT_CAP = 32000;
+
+export function capInput(s) {
+  const str = String(s == null ? '' : s);
+  if (str.length <= DRAFTER_INPUT_CAP) return str;
+  const over = str.length - DRAFTER_INPUT_CAP;
+  return str.slice(0, DRAFTER_INPUT_CAP) +
+    `\n[traceweave: input truncated — ${over} chars over the ${DRAFTER_INPUT_CAP}-char drafter cap]`;
+}
+
 export function buildDraftPrompt(req) {
   const { downstream, upstream, downstreamCurrent } = req;
-  const cur = (downstreamCurrent || '').trim();
+  const cur = capInput((downstreamCurrent || '').trim());
   return [
     `You are reconciling a downstream product artifact after one of its upstream`,
     `ingredients changed. Re-derive the downstream artifact from the NEW upstream.`,
@@ -35,7 +55,7 @@ export function buildDraftPrompt(req) {
     `CHANGED UPSTREAM ingredient (${upstream.id}, type ${upstream.type}, "${upstream.title}").`,
     `Its CURRENT resolved content is below, between the markers:`,
     `<<<UPSTREAM`,
-    String(upstream.content == null ? '' : upstream.content).trim(),
+    capInput(String(upstream.content == null ? '' : upstream.content).trim()),
     `UPSTREAM>>>`,
     ``,
     cur
@@ -75,6 +95,84 @@ function draftViaCmd(command, prompt) {
   return draft;
 }
 
+// ---- WS3 zero-dep API backends ---------------------------------------------
+// Shared HTTP call: single completion, no tools, bounded time. The API key is
+// read from the environment at call time and appears ONLY in the request
+// header — never in errors, logs, briefs, or proposals.
+async function draftViaApi({ url, headers, payload, extract, label }) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 120000);
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...headers },
+      body: JSON.stringify(payload),
+      signal: ctl.signal,
+    });
+  } catch (e) {
+    throw new Error(`${label}: request failed (${e.name === 'AbortError' ? 'timeout after 120s' : e.message})`);
+  } finally {
+    clearTimeout(timer);
+  }
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`${label}: HTTP ${res.status} — ${text.slice(0, 200).replace(/\s+/g, ' ')}`);
+  }
+  let json;
+  try { json = JSON.parse(text); } catch { throw new Error(`${label}: non-JSON response`); }
+  const out = extract(json);
+  if (typeof out !== 'string' || !out.trim()) throw new Error(`${label}: response had no draft text`);
+  const draft = stripPreamble(out);
+  if (!draft) throw new Error(`${label}: draft empty after preamble stripping`);
+  return draft;
+}
+
+function requireKey(apiKeyEnv, label) {
+  const key = process.env[apiKeyEnv];
+  if (!key || !key.trim()) {
+    throw new Error(`${label}: no API key in env ${apiKeyEnv} — set the repo secret / environment variable`);
+  }
+  return key.trim();
+}
+
+// Anthropic Messages API, direct. Single user message, no tools, no system
+// escalation surface beyond the pinned prompt.
+async function draftViaAnthropic(prompt, d) {
+  const key = requireKey(d.apiKeyEnv, 'anthropic drafter');
+  return draftViaApi({
+    label: 'anthropic drafter',
+    url: `${d.baseUrl}/v1/messages`,
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    payload: {
+      model: d.model,
+      max_tokens: d.maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    },
+    // content is a LIST of typed blocks; models may emit thinking blocks
+    // before the text block — select text blocks, never content[0] blindly.
+    extract: (j) => j && Array.isArray(j.content)
+      ? j.content.filter((b) => b && b.type === 'text' && typeof b.text === 'string').map((b) => b.text).join('\n')
+      : null,
+  });
+}
+
+// OpenAI-compatible chat completions (base_url covers self-hosted endpoints).
+async function draftViaOpenAI(prompt, d) {
+  const key = requireKey(d.apiKeyEnv, 'openai drafter');
+  return draftViaApi({
+    label: 'openai drafter',
+    url: `${d.baseUrl}/chat/completions`,
+    headers: { authorization: `Bearer ${key}` },
+    payload: {
+      model: d.model,
+      max_tokens: d.maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    },
+    extract: (j) => j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content,
+  });
+}
+
 // Deterministic, hermetic, NO network. Embeds the upstream fingerprint so the
 // selftest can assert the draft is concrete and upstream-specific.
 function draftViaTemplate(req) {
@@ -99,7 +197,10 @@ function draftViaTemplate(req) {
 
 // Returns { ok, kind, backend, content, error }. kind 'brief' means the caller
 // should write a reconcile BRIEF (concrete context, no auto-draft).
-export function draft(req, { backend = 'template', command = null } = {}) {
+// Async since WS3 (API backends); template/cmd/none resolve synchronously.
+// `opts` is the loaded config's drafter block (config.mjs shapes it).
+export async function draft(req, opts = {}) {
+  const { backend = 'template', command = null } = opts;
   if (backend === 'template') {
     return { ok: true, kind: 'draft', backend: 'template', content: draftViaTemplate(req), error: null };
   }
@@ -115,6 +216,15 @@ export function draft(req, { backend = 'template', command = null } = {}) {
       return { ok: true, kind: 'draft', backend: 'cmd', content, error: null };
     } catch (e) {
       return { ok: false, kind: 'brief', backend: 'cmd', content: null, error: `cmd drafter failed: ${e.message}` };
+    }
+  }
+  if (backend === 'anthropic' || backend === 'openai') {
+    const via = backend === 'anthropic' ? draftViaAnthropic : draftViaOpenAI;
+    try {
+      const content = await via(buildDraftPrompt(req), opts);
+      return { ok: true, kind: 'draft', backend, content, error: null };
+    } catch (e) {
+      return { ok: false, kind: 'brief', backend, content: null, error: e.message };
     }
   }
   return { ok: false, kind: 'brief', backend: String(backend), content: null, error: `unknown drafter backend "${backend}"` };

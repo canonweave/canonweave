@@ -11,10 +11,16 @@ import { ConfigError } from './errors.mjs';
 
 export const CONFIG_FILENAME = 'traceweave.yml';
 
-// WS1 drafter backends. anthropic/openai are designed (section 7) and ship in
-// WS3 (AIW-232); naming them today is a config error with a clear pointer.
-const BACKENDS_AVAILABLE = ['template', 'cmd', 'none'];
-const BACKENDS_WS3 = ['anthropic', 'openai'];
+// Drafter backends. template/cmd/none shipped in WS1; anthropic/openai are
+// the WS3 (AIW-232) zero-dep API backends — design section 7. API keys are
+// read from the environment (repo secrets in CI), NEVER from this file.
+const BACKENDS_AVAILABLE = ['template', 'cmd', 'none', 'anthropic', 'openai'];
+const BACKENDS_API = ['anthropic', 'openai'];
+const API_DEFAULTS = {
+  anthropic: { baseUrl: 'https://api.anthropic.com', apiKeyEnv: 'ANTHROPIC_API_KEY', model: 'claude-sonnet-5' },
+  openai:    { baseUrl: 'https://api.openai.com/v1', apiKeyEnv: 'OPENAI_API_KEY',    model: null },
+};
+const ENV_NAME_RE = /^[A-Z_][A-Z0-9_]*$/;
 
 const KNOWN_KEYS = new Set(['roots', 'ontology', 'graph', 'gate', 'drafter', 'sync', 'resolvers']);
 
@@ -88,11 +94,6 @@ export function loadConfig(configPath) {
     throw new ConfigError('TW_CONFIG_DRAFTER', `${configPath}: "drafter" must be a map`);
   }
   const backend = drafterRaw.backend === undefined ? 'template' : drafterRaw.backend;
-  if (BACKENDS_WS3.includes(backend)) {
-    throw new ConfigError('TW_CONFIG_DRAFTER_WS3',
-      `${configPath}: drafter backend "${backend}" ships in WS3 (AI reconcile loop). ` +
-      `Available now: ${BACKENDS_AVAILABLE.join(' | ')}`);
-  }
   if (!BACKENDS_AVAILABLE.includes(backend)) {
     throw new ConfigError('TW_CONFIG_DRAFTER_BACKEND',
       `${configPath}: unknown drafter backend "${backend}" (available: ${BACKENDS_AVAILABLE.join(' | ')})`);
@@ -105,6 +106,35 @@ export function loadConfig(configPath) {
         `the prompt is appended as the final argument`);
     }
     drafter.command = drafterRaw.command;
+  }
+  if (BACKENDS_API.includes(backend)) {
+    const d = API_DEFAULTS[backend];
+    const strField = (key, fallback) => {
+      const v = drafterRaw[key];
+      if (v === undefined) return fallback;
+      if (typeof v !== 'string' || v.trim() === '') {
+        throw new ConfigError('TW_CONFIG_DRAFTER', `${configPath}: drafter "${key}" must be a non-empty string`);
+      }
+      return v.trim();
+    };
+    drafter.model = strField('model', d.model);
+    if (!drafter.model) {
+      throw new ConfigError('TW_CONFIG_DRAFTER_MODEL',
+        `${configPath}: drafter backend "openai" requires "model" (no universal default exists ` +
+        `for OpenAI-compatible endpoints — name the model your endpoint serves)`);
+    }
+    drafter.baseUrl = strField('base_url', d.baseUrl).replace(/\/+$/, '');
+    drafter.apiKeyEnv = strField('api_key_env', d.apiKeyEnv);
+    if (!ENV_NAME_RE.test(drafter.apiKeyEnv)) {
+      throw new ConfigError('TW_CONFIG_DRAFTER',
+        `${configPath}: drafter "api_key_env" must be an environment variable NAME ` +
+        `(A-Z, 0-9, _) — the key itself never goes in config`);
+    }
+    const mt = drafterRaw.max_tokens === undefined ? 8192 : drafterRaw.max_tokens;
+    if (!Number.isInteger(mt) || mt <= 0) {
+      throw new ConfigError('TW_CONFIG_DRAFTER', `${configPath}: drafter "max_tokens" must be a positive integer`);
+    }
+    drafter.maxTokens = mt;
   }
 
   // sync

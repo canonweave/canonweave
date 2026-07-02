@@ -13,7 +13,7 @@ import {
   loadConfig, loadOntology, loadArtifacts, buildGraph, gateVerdict, assertResolved,
   parseFrontmatter, serializeFrontmatter,
   loadResolverPlugins,
-  draft,
+  draft, buildDraftPrompt,
   reconcileDraft, reconcileApply,
 } from '../../engine/src/index.mjs';
 import { runInit } from './init.mjs';
@@ -384,21 +384,92 @@ export async function runSelftest() {
       upstream: { id: 'root', type: 'root', title: 'Root', fingerprintOld: 'sha256:old', fingerprintNew: fpBody('ROOT-v9'), content: 'ROOT-v9 content' },
       downstreamCurrent: 'old child content',
     };
-    const t = draft(req, { backend: 'template' });
+    const t = await draft(req, { backend: 'template' });
     check('drafter: template backend yields a concrete upstream-specific draft',
       t.ok && t.kind === 'draft' && t.content.includes(req.upstream.fingerprintNew) && t.content.includes('root'));
 
     const echoScript = join(ROOT, 'echo-drafter.mjs');
     writeFileSync(echoScript, "console.log('# CMD DRAFT\\n\\nCMD-DRAFT-BODY');\n", 'utf8');
-    const c = draft(req, { backend: 'cmd', command: [process.execPath, echoScript] });
+    const c = await draft(req, { backend: 'cmd', command: [process.execPath, echoScript] });
     check('drafter: cmd backend runs the configured argv and reads stdout',
       c.ok && c.kind === 'draft' && /CMD-DRAFT-BODY/.test(c.content), c.error || '');
 
-    const cFail = draft(req, { backend: 'cmd', command: [process.execPath, join(ROOT, 'no-such-script.mjs')] });
+    const cFail = await draft(req, { backend: 'cmd', command: [process.execPath, join(ROOT, 'no-such-script.mjs')] });
     check('drafter: failing cmd falls back to brief mode', !cFail.ok && cFail.kind === 'brief');
 
-    const n = draft(req, { backend: 'none' });
+    const n = await draft(req, { backend: 'none' });
     check('drafter: none backend always produces a brief', !n.ok && n.kind === 'brief');
+  }
+
+
+  // ---- 12b. WS3 API drafter backends (loopback, hermetic — design section 7)
+  {
+    const req = {
+      downstream: { id: 'child', type: 'child', title: 'Child', build: 'derive from root' },
+      upstream: { id: 'root', type: 'root', title: 'Root', fingerprintOld: 'sha256:old', fingerprintNew: fpBody('ROOT-ws3'), content: 'ROOT-ws3 content' },
+      downstreamCurrent: 'old child content',
+    };
+    const hits = [];
+    const server = createServer((rq, rs) => {
+      let body = '';
+      rq.on('data', (c) => { body += c; });
+      rq.on('end', () => {
+        let parsed = null;
+        try { parsed = JSON.parse(body); } catch { /* keep null */ }
+        hits.push({ path: rq.url, headers: rq.headers, body: parsed });
+        if (rq.url === '/v1/messages') {
+          if (!rq.headers['x-api-key']) { rs.writeHead(401); rs.end('{"error":"no key"}'); return; }
+          rs.writeHead(200, { 'content-type': 'application/json' });
+          rs.end(JSON.stringify({ content: [{ type: 'thinking', thinking: 'internal chain' }, { type: 'text', text: '```markdown\nANTHROPIC-DRAFT for ' + parsed.model + '\n```' }] }));
+        } else if (rq.url === '/compat/chat/completions') {
+          rs.writeHead(200, { 'content-type': 'application/json' });
+          rs.end(JSON.stringify({ choices: [{ message: { content: 'OPENAI-DRAFT-BODY' } }] }));
+        } else if (rq.url === '/err/chat/completions') {
+          rs.writeHead(500); rs.end('boom');
+        } else { rs.writeHead(404); rs.end('{}'); }
+      });
+    });
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+
+    process.env.TW_TEST_ANTHROPIC_KEY = 'tw-test-key-a';
+    const a = await draft(req, { backend: 'anthropic', model: 'm-test', baseUrl: base, apiKeyEnv: 'TW_TEST_ANTHROPIC_KEY', maxTokens: 777 });
+    const acall = hits.find((h) => h.path === '/v1/messages');
+    check('drafter(ws3): anthropic posts a pinned single-completion request (no tools)',
+      a.ok && a.kind === 'draft' && !!acall
+      && acall.body.model === 'm-test' && acall.body.max_tokens === 777
+      && Array.isArray(acall.body.messages) && acall.body.messages.length === 1
+      && acall.body.messages[0].role === 'user' && !('tools' in acall.body)
+      && acall.headers['x-api-key'] === 'tw-test-key-a'
+      && acall.headers['anthropic-version'] === '2023-06-01',
+      a.error || '');
+    check('drafter(ws3): anthropic draft fence-stripped to the bare body',
+      a.content === 'ANTHROPIC-DRAFT for m-test');
+
+    process.env.TW_TEST_OPENAI_KEY = 'tw-test-key-o';
+    const o = await draft(req, { backend: 'openai', model: 'local-model', baseUrl: `${base}/compat`, apiKeyEnv: 'TW_TEST_OPENAI_KEY', maxTokens: 512 });
+    const ocall = hits.find((h) => h.path === '/compat/chat/completions');
+    check('drafter(ws3): openai-compatible hits {base_url}/chat/completions with bearer key',
+      o.ok && o.content === 'OPENAI-DRAFT-BODY' && !!ocall
+      && ocall.headers.authorization === 'Bearer tw-test-key-o'
+      && ocall.body.model === 'local-model' && !('tools' in ocall.body),
+      o.error || '');
+
+    delete process.env.TW_TEST_MISSING_KEY;
+    const mk = await draft(req, { backend: 'anthropic', model: 'm', baseUrl: base, apiKeyEnv: 'TW_TEST_MISSING_KEY', maxTokens: 16 });
+    check('drafter(ws3): missing key -> brief naming only the env VAR (key never logged)',
+      !mk.ok && mk.kind === 'brief' && mk.error.includes('TW_TEST_MISSING_KEY') && !mk.error.includes('tw-test-key'));
+
+    const he = await draft(req, { backend: 'openai', model: 'm', baseUrl: `${base}/err`, apiKeyEnv: 'TW_TEST_OPENAI_KEY', maxTokens: 16 });
+    check('drafter(ws3): API failure -> brief fallback carrying HTTP status, never the key',
+      !he.ok && he.kind === 'brief' && /HTTP 500/.test(he.error) && !he.error.includes('tw-test-key'));
+
+    const big = { ...req, upstream: { ...req.upstream, content: 'X'.repeat(40000) } };
+    const prompt = buildDraftPrompt(big);
+    check('drafter(ws3): input size cap bounds hostile upstream content',
+      prompt.length < 40000 && prompt.includes('truncated'));
+
+    await new Promise((r) => server.close(r));
   }
 
   // ---- 13. reconcile loop: draft -> apply -> fresh (template backend) --------
@@ -447,8 +518,19 @@ export async function runSelftest() {
     check('config: unknown top-level key rejected', r1.ok, r1.detail);
 
     writeFileSync(join(repo, 'traceweave.yml'), 'drafter:\n  backend: anthropic\n', 'utf8');
-    const r2 = await expectCode(() => loadConfig(join(repo, 'traceweave.yml')), 'TW_CONFIG_DRAFTER_WS3');
-    check('config: anthropic/openai backends point at WS3 (not silently accepted)', r2.ok, r2.detail);
+    const cfgA = loadConfig(join(repo, 'traceweave.yml'));
+    check('config: anthropic backend accepted with safe defaults (WS3 shipped)',
+      cfgA.drafter.backend === 'anthropic' && cfgA.drafter.apiKeyEnv === 'ANTHROPIC_API_KEY'
+      && cfgA.drafter.baseUrl === 'https://api.anthropic.com' && cfgA.drafter.maxTokens === 8192
+      && typeof cfgA.drafter.model === 'string' && cfgA.drafter.model.length > 0);
+
+    writeFileSync(join(repo, 'traceweave.yml'), 'drafter:\n  backend: openai\n', 'utf8');
+    const r2 = await expectCode(() => loadConfig(join(repo, 'traceweave.yml')), 'TW_CONFIG_DRAFTER_MODEL');
+    check('config: openai backend without model rejected (TW_CONFIG_DRAFTER_MODEL)', r2.ok, r2.detail);
+
+    writeFileSync(join(repo, 'traceweave.yml'), 'drafter:\n  backend: anthropic\n  api_key_env: "lower case"\n', 'utf8');
+    const r2b = await expectCode(() => loadConfig(join(repo, 'traceweave.yml')), 'TW_CONFIG_DRAFTER');
+    check('config: api_key_env must be an environment variable NAME, never a key', r2b.ok, r2b.detail);
 
     const r3 = await expectCode(() => loadConfig(join(repo, 'nope', 'traceweave.yml')), 'TW_CONFIG_NOT_FOUND');
     check('config: missing traceweave.yml is TW_CONFIG_NOT_FOUND', r3.ok, r3.detail);

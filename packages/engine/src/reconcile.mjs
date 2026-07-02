@@ -102,7 +102,7 @@ export async function reconcileDraft({ cfg, onto, byId, ctx, id }) {
     downstreamCurrent,
   };
 
-  const result = runDrafter(req, { backend: cfg.drafter.backend, command: cfg.drafter.command || null });
+  const result = await runDrafter(req, cfg.drafter);
 
   const dir = proposalsDir(cfg.repoRoot);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

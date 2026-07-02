@@ -1,0 +1,43 @@
+# Traceweave reconcile action — the AI plane (design section 7).
+# When ingredient links go suspect, draft the corrected downstream artifacts
+# and open ONE idempotent reconcile PR per suspect downstream. Merging a
+# reconcile PR IS the review: the commit updates the artifact body AND its
+# reconciled fingerprint, so the suspect clears and the next gate run greens.
+#
+# Requires GITHUB_TOKEN with contents:write + pull-requests:write. The drafter
+# API key (for anthropic/openai backends) comes from a repo secret via env —
+# never from config, never from our infrastructure, never logged.
+# Consumer workflow template: templates/github/traceweave-reconcile.yml
+name: traceweave-reconcile
+description: >-
+  Draft corrected downstream artifacts for suspect ingredient links and open
+  idempotent reconcile PRs (branch traceweave/reconcile/<id>--<fp8>; re-runs
+  update the open PR; a further upstream change closes the stale PR and opens
+  the linked successor). Merging the PR clears the suspect link.
+author: traceweave
+branding:
+  icon: git-pull-request
+  color: purple
+inputs:
+  config:
+    description: Path to traceweave.yml, relative to the workspace (defaults to auto-discovery from the workspace root)
+    required: false
+    default: ''
+outputs:
+  suspects:
+    description: Number of suspect ingredient links found
+  downstreams:
+    description: Number of suspect downstream artifacts processed
+  prs-created:
+    description: Reconcile PRs opened by this run
+  prs-updated:
+    description: Existing reconcile PRs updated in place by this run
+  prs-closed:
+    description: Stale reconcile PRs closed in favor of successors
+  briefs:
+    description: Downstreams that produced a brief (no auto-draft) instead of a PR
+  result:
+    description: ok | partial (some downstreams failed) | clean (nothing to do)
+runs:
+  using: node20
+  main: index.mjs
