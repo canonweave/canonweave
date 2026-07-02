@@ -75,6 +75,15 @@ The gate workflow (`traceweave-gate.yml`) stays the merge blocker; the
 reconcile workflow is the fixer. They compose: push breaks a link → gate
 blocks PRs → reconcile PR appears → review + merge → gate green.
 
+**Deep chains converge in waves.** A reconcile run drafts only the DIRECTLY
+suspect downstreams. Merging a reconcile PR rewrites that artifact, so its
+own dependents go suspect next — and the merge (a push to the default
+branch) triggers the next reconcile wave automatically. A chain
+`brief → requirements → acceptance-criteria → test-plan` re-reviews itself
+in successive waves, one reviewed hop at a time, until the gate greens.
+That cascade is not a bug; it is the product — nothing goes silently stale,
+and every hop gets a human merge.
+
 ## Threat model (layered injection defense)
 
 A hostile artifact edit can try to steer the drafter. The layers (design §7):

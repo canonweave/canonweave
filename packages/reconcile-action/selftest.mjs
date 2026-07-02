@@ -5,7 +5,8 @@
 // Scenarios: missing token · clean graph no-op · suspect -> branch + PR
 // (merge-greens proof: the branch checkout gates green) · idempotent re-run
 // (PATCH, no duplicate) · upstream moved again (successor PR + stale closed)
-// · brief mode (backend none -> no PR).
+// · brief mode (backend none -> no PR) · deep-chain convergence (waves:
+// merge -> next tier suspect -> next PR -> ... -> gate green).
 import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -260,6 +261,58 @@ let branchA = null;
   check('brief surfaced in the job summary', /brief/.test(r.summary));
   check('brief mode pushed no branches', !g(fb.origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').includes('traceweave/reconcile/'));
   check('brief mode created no PR objects', prStore.length === before);
+}
+
+// 7. deep chain: reconcile waves converge to green (the ripple is the point)
+{
+  const name = 'fixC';
+  const work = join(ROOT, name, 'work');
+  const origin = join(ROOT, name, 'origin.git');
+  mkdirSync(join(work, 'docs', 'trace'), { recursive: true });
+  const ONTO3 = [
+    'version: 1', 'tiers: [base, mid, leaf]', 'types:',
+    '  root:', '    tier: base', '    ingredients: []',
+    '  mid:', '    tier: mid', '    ingredients: [root]',
+    '  leaf:', '    tier: leaf', '    ingredients: [mid]',
+    'profiles:', '  core:', '    required: [root, mid, leaf]', '',
+  ].join('\n');
+  writeFileSync(join(work, 'traceweave.yml'), CONFIG, 'utf8');
+  writeFileSync(join(work, 'docs', 'trace', 'ontology.yml'), ONTO3, 'utf8');
+  art(work, { id: 'root', type: 'root', body: 'R1' });
+  art(work, { id: 'mid', type: 'mid', body: 'M1', ingredients: ['root'], reconciled: { root: fpBody('R1') } });
+  art(work, { id: 'leaf', type: 'leaf', body: 'L1', ingredients: ['mid'], reconciled: { mid: fpBody('M1') } });
+  g(work, 'init', '-q', '-b', 'main');
+  g(work, 'config', 'user.name', 'fixture'); g(work, 'config', 'user.email', 'fixture@local');
+  const b0 = cli(work, 'build');
+  if (b0.status !== 0) throw new Error('fixC build failed: ' + b0.out);
+  g(work, 'add', '-A'); g(work, 'commit', '-q', '-m', 'green baseline');
+  execFileSync('git', ['clone', '-q', '--bare', work, origin], { encoding: 'utf8' });
+  g(work, 'remote', 'add', 'origin', origin);
+
+  art(work, { id: 'root', type: 'root', body: 'R2' });
+  g(work, 'add', '-A'); g(work, 'commit', '-q', '-m', 'upstream: root v2');
+
+  // wave 1: only the DIRECT dependent (mid) is drafted
+  const w1 = await runAction(work);
+  check('cascade wave 1: only the direct dependent gets a PR', w1.status === 0 && out(w1, 'downstreams') === '1' && out(w1, 'prs-created') === '1');
+  const wave1Branch = g(origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').find((x) => x.startsWith('traceweave/reconcile/mid--'));
+  check('cascade wave 1: branch is for mid', !!wave1Branch, wave1Branch || '(none)');
+
+  // merge wave 1 (fast-forward the reconcile commit onto main) -> leaf goes suspect
+  g(work, 'fetch', '-q', 'origin', wave1Branch);
+  g(work, 'merge', '-q', '--ff-only', 'FETCH_HEAD');
+  const w2 = await runAction(work);
+  check('cascade wave 2: merging surfaced the NEXT tier (leaf) and drafted it', w2.status === 0 && out(w2, 'prs-created') === '1');
+  const wave2Branch = g(origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').find((x) => x.startsWith('traceweave/reconcile/leaf--'));
+  check('cascade wave 2: branch is for leaf', !!wave2Branch, wave2Branch || '(none)');
+
+  // merge wave 2 -> the chain is fully re-reviewed, gate green, reconcile no-ops
+  g(work, 'fetch', '-q', 'origin', wave2Branch);
+  g(work, 'merge', '-q', '--ff-only', 'FETCH_HEAD');
+  const gate = cli(work, 'gate');
+  check('cascade converged: gate is GREEN after the waves', gate.status === 0, gate.out.slice(0, 100));
+  const w3 = await runAction(work);
+  check('cascade converged: next reconcile run is a clean no-op', w3.status === 0 && out(w3, 'result') === 'clean');
 }
 
 server.close();
