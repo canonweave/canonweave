@@ -44,7 +44,9 @@ npm test   # = CLI selftest + action selftest + determinism snapshot + zero-deps
 Status: WS1 (core extraction) and WS2 (Action + demo + quickstart) complete —
 engine, CLI, templates, gate action with hermetic GitHub-environment selftest,
 consumer workflow template, branch-protection recipe, CI matrix
-(ubuntu/windows/macos × Node 20/22/24). WS5 (release engineering, AIW-230) in
-progress: home is **github.com/traceweavehq/traceweave** (org decided
-2026-07-02); publish runbook in [docs/releasing.md](docs/releasing.md);
-packages stay `private: true` until the license is confirmed there.
+(ubuntu/windows/macos × Node 20/22/24). WS5 (release
+engineering) complete: Apache-2.0, SHA-pinned CI, CodeQL + Scorecard
+(activate at the public flip), tag-triggered provenance release pipeline
+([docs/releasing.md](docs/releasing.md)). The repo stays private until the
+dogfood gate (AIW-231) passes — the launch flip is a one-sitting checklist
+in the runbook.

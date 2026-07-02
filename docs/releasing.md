@@ -5,33 +5,38 @@ Decisions: GitHub org **traceweavehq** (2026-07-02) · License **Apache-2.0**
 The repo stays PRIVATE and nothing publishes publicly (repo flip, npm,
 Marketplace) before the dogfood gate (AIW-231) passes.
 
-## One-time setup
+## State (2026-07-02)
 
-1. Create the GitHub org `traceweavehq` (web UI — github.com/organizations/new),
-   then create the empty repo `traceweavehq/traceweave`.
-2. Reserve the npm names **immediately** (they were free on 2026-07-02, they
-   are first-come): `npm org create traceweave` (scope `@traceweave`) and the
-   unscoped CLI name `traceweave` (first publish claims it).
-3. Collision sweep before the first public push: search npm, PyPI, crates.io,
-   GitHub, and a trademark register for "traceweave" (a dormant GitHub user
-   `traceweave` exists — created 2025-09, zero repos; no other collision known).
-4. Push this monorepo; enable: branch ruleset requiring the `gate` +
-   `test` checks (see docs/gate-recipes.md), CodeQL + Scorecard workflows
-   (already in `.github/workflows/`), private vulnerability reporting.
+DONE: org + private repo live · Apache-2.0 · SHA-pinned CI matrix green on
+3 OS × Node 20/22/24 · CodeQL/Scorecard workflows (guarded until public) ·
+release pipeline (`.github/workflows/release.yml` + `scripts/pack-npm.mjs`) ·
+ruleset prepared (`.github/ruleset-protect-main.json`; API returns 403 while
+the repo is private on the free plan).
 
-## Every release
+## Launch flip (after the AIW-231 dogfood gate — one sitting)
 
-1. `npm test` green on the CI matrix (3 OS × Node 20/22/24).
-2. Bump versions (engine/cli/action move together while pre-1.0), update
-   CHANGELOG.md, drop `"private": true` (first release only), confirm
-   `"license"` fields.
-3. Tag: signed, `vX.Y.Z`. The action additionally moves the **major tag**
-   (`v1`) — but consumers are told to pin by SHA, not tag (SECURITY.md).
-4. Publish with provenance from a GitHub Actions release workflow (npm
-   provenance requires CI): `npm publish --provenance --access public` for
-   `traceweave` (CLI), `@traceweave/engine`, `@traceweave/action`.
-5. Announce SHA-pinned action usage in the release notes:
-   `uses: traceweavehq/traceweave/packages/action@<release-commit-sha>`.
+1. **NPM_TOKEN**: create an npm automation token (npm account: Aidar), store
+   in Infisical as `NPM_TOKEN`, then `gh secret set NPM_TOKEN -R traceweavehq/traceweave`.
+   The npm names `traceweave` + `@traceweave` were free on 2026-07-02 —
+   first publish claims them. Collision sweep first: npm, PyPI, crates.io,
+   trademark register ("traceweave" GitHub user is a dormant 2025-09 account).
+2. Make the repo public: `gh repo edit traceweavehq/traceweave --visibility public`.
+3. Apply the ruleset: `gh api -X POST /repos/traceweavehq/traceweave/rulesets --input .github/ruleset-protect-main.json`.
+4. Enable private vulnerability reporting + secret scanning (Settings →
+   Code security). CodeQL + Scorecard start running on the next push.
+5. First release: bump versions if needed, update CHANGELOG, then
+   `git tag -s v0.1.0 && git push origin v0.1.0` — the release workflow runs
+   the suite, packs, publishes `traceweave` with provenance (SLSA statement,
+   `npm audit signatures` verifiable), creates the GitHub release with the
+   pinned action ref, and moves the `v1` major tag.
+
+## The npm artifact
+
+ONE package `traceweave` (design §2): engine + CLI + templates + docs,
+assembled by `scripts/pack-npm.mjs` into `dist-npm/` preserving the
+monorepo-relative import layout (zero rewrites, zero dependencies). The
+GitHub Action is NOT on npm — consumed via the pinned action ref only.
+Verify any time: `node scripts/pack-npm.mjs && node dist-npm/packages/cli/bin/traceweave.mjs selftest`.
 
 ## Pinning contract (what we promise consumers)
 
