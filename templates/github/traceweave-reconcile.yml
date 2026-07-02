@@ -10,6 +10,10 @@
 # The drafter API key comes from YOUR repo secret (never the traceweave
 # project's infrastructure). With no key configured the run degrades to
 # briefs in the job summary — nothing breaks. Threat model: docs/reconcile.md.
+#
+# ONE-TIME REPO SETTING (GitHub default blocks Actions-created PRs):
+# Settings -> Actions -> General -> Workflow permissions -> check
+# "Allow GitHub Actions to create and approve pull requests".
 name: traceweave-reconcile
 
 on:

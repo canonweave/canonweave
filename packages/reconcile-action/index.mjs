@@ -235,7 +235,11 @@ async function main() {
         rows.push(`| \`${id}\` | \`${d.upstream.id}\` | updated #${prNumber} (\`${fp8(d.upstream.from)}\` -> \`${fp8(d.upstream.to)}\`) |`);
       } else {
         const r = await gh.call('POST', `/pulls`, { title, head: branch, base: baseRef, body });
-        if (!r.ok || !r.json || r.json.number === undefined) throw new Error(`PR creation failed: HTTP ${r.status}`);
+        if (!r.ok || !r.json || r.json.number === undefined) {
+          throw new Error(`PR creation failed: HTTP ${r.status}${r.status === 403
+            ? " — enable 'Allow GitHub Actions to create and approve pull requests' (repo Settings → Actions → General → Workflow permissions); the reconcile branch is already pushed and the next run will attach the PR"
+            : ''}`);
+        }
         prNumber = r.json.number;
         created++;
         rows.push(`| \`${id}\` | \`${d.upstream.id}\` | created #${prNumber} (\`${fp8(d.upstream.from)}\` -> \`${fp8(d.upstream.to)}\`) |`);
