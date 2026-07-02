@@ -115,6 +115,9 @@ function makeFixture(name) {
   const work = join(ROOT, name, 'work');
   const origin = join(ROOT, name, 'origin.git');
   mkdirSync(join(work, 'docs', 'trace'), { recursive: true });
+  // consumer shape: proposals gitignored (the dogfood repo does this — it
+  // broke the original -A + :(exclude) add; the fixture keeps the guard)
+  writeFileSync(join(work, '.gitignore'), '.traceweave/proposals/\n', 'utf8');
   writeFileSync(join(work, 'traceweave.yml'), CONFIG, 'utf8');
   writeFileSync(join(work, 'docs', 'trace', 'ontology.yml'), ONTOLOGY, 'utf8');
   art(work, { id: 'root', type: 'root', body: 'ROOT-v1' });
@@ -269,6 +272,7 @@ let branchA = null;
   const work = join(ROOT, name, 'work');
   const origin = join(ROOT, name, 'origin.git');
   mkdirSync(join(work, 'docs', 'trace'), { recursive: true });
+  writeFileSync(join(work, '.gitignore'), '.traceweave/proposals/\n', 'utf8');
   const ONTO3 = [
     'version: 1', 'tiers: [base, mid, leaf]', 'types:',
     '  root:', '    tier: base', '    ingredients: []',

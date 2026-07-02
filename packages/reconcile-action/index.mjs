@@ -180,6 +180,7 @@ async function main() {
       // fresh working state per downstream, branched from the base
       git(workspace, 'checkout', '-f', baseSha);
       const byId = loadArtifacts(cfg.roots);
+      const artifactPath = byId[id] ? byId[id].path : null;
       const d = await reconcileDraft({ cfg, onto, byId, ctx, id });
 
       if (!d.drafted) {
@@ -196,7 +197,16 @@ async function main() {
       writeFileSync(cfg.graphPath, JSON.stringify(a.graph, null, 2) + '\n', 'utf8');
       try { unlinkSync(proposalPath(cfg.repoRoot, id)); } catch { /* proposal content rides in the PR body */ }
 
-      git(workspace, 'add', '-A', '--', ':(exclude).traceweave/proposals');
+      // Explicit adds of exactly the record files — never a tree sweep. -f
+      // because consumers may gitignore .traceweave/ wholesale: naming an
+      // ignored path (even inside an :(exclude) pathspec) makes git add die
+      // with the ignored-paths advice error (caught live by the dogfood repo,
+      // whose .gitignore covers .traceweave/proposals/).
+      const toAdd = [relPosix(workspace, cfg.graphPath)];
+      if (artifactPath) toAdd.push(relPosix(workspace, artifactPath));
+      const cacheFile = join(ctx.cacheDir, `${id}.content`);
+      if (existsSync(cacheFile)) toAdd.push(relPosix(workspace, cacheFile));
+      git(workspace, 'add', '-f', '--', ...toAdd);
       git(workspace, 'commit', '-m',
         `traceweave reconcile: ${id} <- ${d.upstream.id} (${fp8(d.upstream.to)})\n\n` +
         `Upstream ${d.upstream.id} moved ${fp8(d.upstream.from)} -> ${fp8(d.upstream.to)}; ` +
