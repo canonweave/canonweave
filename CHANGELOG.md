@@ -8,6 +8,21 @@ contracts — changing their meaning is a MAJOR (docs/file-format.md).
 ## [Unreleased]
 
 ### Added
+- WS3 — the AI reconcile loop: zero-dep `anthropic` (Messages API) and
+  `openai` (OpenAI-compatible `base_url`) drafter backends with layered
+  injection defense (single completion, no tools, input caps, fence
+  stripping, key-from-env-only); the reconcile GitHub Action
+  (`packages/reconcile-action`) with idempotent PR mechanics — branch
+  `traceweave/reconcile/<id>--<fp8>`, re-runs update in place, upstream moves
+  close the stale PR and open a linked successor, merging IS the review;
+  consumer workflow template + docs/reconcile.md. Hermetic selftests: engine
+  suite grows 75 -> 83 (loopback API backends), reconcile-action suite adds
+  22 checks (stateful fake PR store + bare git remote).
+
+### Changed
+- `draft()` in the engine is now async (API backends); `TW_CONFIG_DRAFTER_WS3`
+  is retired — `anthropic`/`openai` are accepted, `openai` without `model`
+  fails with the new `TW_CONFIG_DRAFTER_MODEL`.
 - WS1 — zero-dependency core engine (config, frontmatter schema v1, ontology
   with named gate profiles, inline/repo/url resolvers + plugin seam,
   CRLF-normalized fingerprints, deterministic graph, reconcile draft/apply)

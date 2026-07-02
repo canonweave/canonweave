@@ -151,7 +151,7 @@ Stable machine codes; part of the public contract.
 | TW_CONFIG_UNKNOWN_KEY | unknown top-level config key |
 | TW_CONFIG_ROOTS / TW_CONFIG_ONTOLOGY / TW_CONFIG_GRAPH / TW_CONFIG_GATE | malformed path/profile fields |
 | TW_CONFIG_DRAFTER / TW_CONFIG_DRAFTER_BACKEND / TW_CONFIG_DRAFTER_CMD | malformed drafter block |
-| TW_CONFIG_DRAFTER_WS3 | `anthropic`/`openai` named before WS3 ships |
+| TW_CONFIG_DRAFTER_MODEL | drafter backend `openai` without a `model` (no universal default) |
 | TW_CONFIG_SYNC / TW_CONFIG_RESOLVERS | malformed sync / resolvers block |
 | TW_SCHEMA_NO_FRONTMATTER / TW_SCHEMA_YAML | artifact missing/unparseable frontmatter |
 | TW_SCHEMA_MISSING_VERSION / TW_SCHEMA_UNSUPPORTED_VERSION | `traceweave:` key absent / wrong |
