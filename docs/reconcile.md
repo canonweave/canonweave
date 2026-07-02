@@ -71,6 +71,11 @@ Triggers: push to the default branch (the run no-ops when the graph is
 clean), `workflow_dispatch`, optional schedule. Needs `contents: write` +
 `pull-requests: write` and, for AI drafts, your model-key repo secret.
 
+**One-time repo setting** (GitHub disables it by default): Settings →
+Actions → General → Workflow permissions → check **"Allow GitHub Actions to
+create and approve pull requests."** Without it the branch pushes but the
+PR POST returns 403 (the action tells you exactly this).
+
 The gate workflow (`traceweave-gate.yml`) stays the merge blocker; the
 reconcile workflow is the fixer. They compose: push breaks a link → gate
 blocks PRs → reconcile PR appears → review + merge → gate green.
