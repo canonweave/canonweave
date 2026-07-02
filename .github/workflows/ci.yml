@@ -29,6 +29,8 @@ jobs:
         run: node packages/cli/bin/traceweave.mjs selftest
       - name: action selftest (fake GitHub env, loopback API)
         run: node packages/action/selftest.mjs
+      - name: reconcile-action selftest (stateful fake PR API, bare git remote)
+        run: node packages/reconcile-action/selftest.mjs
       - name: determinism snapshot (build twice + CRLF + committed demo)
         run: node scripts/determinism.mjs
       - name: zero runtime dependencies

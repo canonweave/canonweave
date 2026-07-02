@@ -1,0 +1,8 @@
+{
+  "name": "@traceweave/reconcile-action",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Traceweave reconcile action — idempotent AI fix PRs for suspect artifact links (design section 7)",
+  "type": "module",
+  "main": "index.mjs"
+}
