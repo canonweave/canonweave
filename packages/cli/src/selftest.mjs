@@ -420,7 +420,7 @@ export async function runSelftest() {
         if (rq.url === '/v1/messages') {
           if (!rq.headers['x-api-key']) { rs.writeHead(401); rs.end('{"error":"no key"}'); return; }
           rs.writeHead(200, { 'content-type': 'application/json' });
-          rs.end(JSON.stringify({ content: [{ type: 'text', text: '```markdown\nANTHROPIC-DRAFT for ' + parsed.model + '\n```' }] }));
+          rs.end(JSON.stringify({ content: [{ type: 'thinking', thinking: 'internal chain' }, { type: 'text', text: '```markdown\nANTHROPIC-DRAFT for ' + parsed.model + '\n```' }] }));
         } else if (rq.url === '/compat/chat/completions') {
           rs.writeHead(200, { 'content-type': 'application/json' });
           rs.end(JSON.stringify({ choices: [{ message: { content: 'OPENAI-DRAFT-BODY' } }] }));

@@ -149,7 +149,11 @@ async function draftViaAnthropic(prompt, d) {
       max_tokens: d.maxTokens,
       messages: [{ role: 'user', content: prompt }],
     },
-    extract: (j) => j && j.content && j.content[0] && j.content[0].text,
+    // content is a LIST of typed blocks; models may emit thinking blocks
+    // before the text block — select text blocks, never content[0] blindly.
+    extract: (j) => j && Array.isArray(j.content)
+      ? j.content.filter((b) => b && b.type === 'text' && typeof b.text === 'string').map((b) => b.text).join('\n')
+      : null,
   });
 }
 
