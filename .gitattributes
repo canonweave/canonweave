@@ -1,0 +1,5 @@
+# LF everywhere, every OS. graph.json is byte-compared in CI (determinism
+# snapshot); autocrlf checkouts would flip its line endings on Windows and
+# break byte-identity. Engine-level CRLF handling is proven separately by the
+# explicit CRLF fixtures in the selftest + determinism script.
+* text=auto eol=lf
