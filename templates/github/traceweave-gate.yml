@@ -1,0 +1,43 @@
+# Traceweave gate workflow — copy into .github/workflows/traceweave-gate.yml
+# of any repo that has a traceweave.yml (design section 6).
+#
+# Gate mode needs NO secrets. The default GITHUB_TOKEN is used only for the
+# sticky PR comment; on fork PRs it is read-only and the run degrades to
+# annotations + job summary, still pass/fail.
+#
+# Make it a MERGE BLOCKER with branch protection / rulesets — recipe:
+# docs/gate-recipes.md in the traceweave repo.
+name: traceweave-gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]        # adjust to your default branch
+  merge_group:              # merge-queue support
+  workflow_dispatch:
+  # schedule:               # optional nightly drift audit
+  #   - cron: '17 2 * * *'
+
+concurrency:
+  group: traceweave-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  checks: write             # annotations attach to the job's check run
+  pull-requests: write      # sticky comment; forks lose this and degrade cleanly
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3 — pin actions by SHA
+      # Same-repo form (the traceweave monorepo gating itself):
+      - uses: ./packages/action
+      # Cross-repo form once published (WS5) — pin by SHA, not tag:
+      # - uses: traceweavehq/traceweave/packages/action@<pinned-sha>
+        with:
+          profile: ''       # empty = the repo's traceweave.yml `gate` default
+          config: ''        # empty = auto-discover traceweave.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

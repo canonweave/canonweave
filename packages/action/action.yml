@@ -1,0 +1,45 @@
+# Traceweave gate action — the enforcement plane (design section 6).
+# Gate mode needs NO secrets. GITHUB_TOKEN is only used for the sticky PR
+# comment and is optional: without it (fork PRs, withheld permissions) the run
+# degrades to annotations + job summary, still pass/fail.
+#
+# Recommended workflow permissions (least privilege):
+#   permissions:
+#     contents: read
+#     checks: write          # annotations attach to the job's check run
+#     pull-requests: write   # sticky comment (omit on forks; degrades cleanly)
+# Consumer workflow template: templates/github/traceweave-gate.yml
+name: traceweave-gate
+description: >-
+  Gate a repository on its Traceweave artifact graph: required coverage
+  present, every ingredient link fresh, every source resolved. Inline
+  annotations on suspect artifact files, one sticky PR comment updated in
+  place, job summary, CLI exit-code contract (0 pass / 1 gate fail / 2 config
+  error / 3 resolve error).
+author: traceweave
+branding:
+  icon: git-merge
+  color: purple
+inputs:
+  profile:
+    description: Gate profile name (defaults to the repo's traceweave.yml `gate`)
+    required: false
+    default: ''
+  config:
+    description: Path to traceweave.yml, relative to the workspace (defaults to auto-discovery from the workspace root)
+    required: false
+    default: ''
+outputs:
+  result:
+    description: pass | fail
+  exit-code:
+    description: "0 pass · 1 gate fail · 2 config error · 3 resolve error"
+  suspects:
+    description: Number of suspect ingredient links
+  gaps:
+    description: Number of coverage gaps for the active profile
+  profile:
+    description: The gate profile that was evaluated
+runs:
+  using: node20
+  main: index.mjs

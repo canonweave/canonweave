@@ -1,0 +1,24 @@
+{
+  "name": "traceweave-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Traceweave \u2014 GitHub-native artifact traceability: files as the system of record, deterministic derivation graph, suspect links, AI reconcile behind a human PR gate.",
+  "type": "module",
+  "workspaces": [
+    "packages/engine",
+    "packages/cli",
+    "packages/action"
+  ],
+  "scripts": {
+    "selftest": "node packages/cli/bin/traceweave.mjs selftest",
+    "determinism": "node scripts/determinism.mjs",
+    "check-zero-deps": "node scripts/check-zero-deps.mjs",
+    "test": "npm run selftest && npm run action-selftest && npm run determinism && npm run check-zero-deps",
+    "action-selftest": "node packages/action/selftest.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/traceweavehq/traceweave.git"
+  },
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,50 @@
+# Traceweave
+
+**GitHub-native artifact traceability.** Every product artifact — brief,
+requirements, acceptance criteria, architecture, test plan — is a Markdown
+file that declares what it derives from. Traceweave builds the derivation
+graph, fingerprints every link, flags stale dependents the moment an upstream
+changes, and gates CI until a human reconciles the thread.
+
+- **Files are the system of record** — versioned, diffable, greppable; no
+  hosted service, no database, no telemetry. State is your git history.
+- **Deterministic** — same inputs, byte-identical `graph.json`; CRLF-safe on
+  Windows checkouts; proven by a determinism snapshot in CI.
+- **Zero runtime dependencies** — Node builtins only, enforced in CI. The
+  dependency tree IS the audit.
+- **Human gate on all AI output** — the reconcile drafter only ever produces a
+  proposal for review; nothing is auto-applied.
+
+## Try it
+
+```bash
+node packages/cli/bin/traceweave.mjs init --template generic-software --dir /tmp/demo
+cd /tmp/demo && node <this-repo>/packages/cli/bin/traceweave.mjs check
+```
+
+Full walkthrough: [docs/quickstart.md](docs/quickstart.md)
+
+## Layout
+
+| path | what |
+|---|---|
+| `packages/engine` | zero-dep core: config, schema, ontology, resolvers, fingerprints, graph, gates, reconcile |
+| `packages/cli` | the `traceweave` binary: init/build/check/gate/fingerprint/clear/reconcile/selftest |
+| `packages/action` | the gate as a GitHub Action: inline annotations, sticky PR comment, job summary, fork-safe ([usage](packages/action/README.md)) |
+| `templates/` | `generic-software`, `product-lifecycle` ontology templates |
+| `examples/demo-repo` | living fixture: docs demo + CI drift check |
+| `docs/` | [quickstart](docs/quickstart.md) · [file formats](docs/file-format.md) · [gate profiles](docs/gate-profiles.md) · [security](docs/security.md) |
+
+## Verify a checkout
+
+```bash
+npm test   # = CLI selftest + action selftest + determinism snapshot + zero-deps, no install step
+```
+
+Status: WS1 (core extraction) and WS2 (Action + demo + quickstart) complete —
+engine, CLI, templates, gate action with hermetic GitHub-environment selftest,
+consumer workflow template, branch-protection recipe, CI matrix
+(ubuntu/windows/macos × Node 20/22/24). WS5 (release engineering, AIW-230) in
+progress: home is **github.com/traceweavehq/traceweave** (org decided
+2026-07-02); publish runbook in [docs/releasing.md](docs/releasing.md);
+packages stay `private: true` until the license is confirmed there.

@@ -1,0 +1,156 @@
+{
+  "traceweave": 1,
+  "generatedAt": null,
+  "defaultProfile": "ready-to-build",
+  "nodes": [
+    {
+      "id": "acceptance-criteria",
+      "type": "acceptance-criteria",
+      "tier": "requirements",
+      "status": "present",
+      "source": {
+        "kind": "inline",
+        "resolver": "inline"
+      },
+      "fingerprint": "sha256:04c53df478872e75252bc0e8e929507d9e2c1584aa6ae850a9ce05cf0806608f",
+      "ingredients": [
+        "requirements"
+      ],
+      "reconciled": {
+        "requirements": "sha256:a73aa5b82f0e71f9e93dc9a61bcbea9e50ff833f59ab16a9c6bc705b847adcc6"
+      },
+      "suspectIngredients": [],
+      "provenance": {
+        "issue": null
+      },
+      "unresolved": false,
+      "resolveError": null
+    },
+    {
+      "id": "architecture-overview",
+      "type": "architecture-overview",
+      "tier": "architecture",
+      "status": "present",
+      "source": {
+        "kind": "inline",
+        "resolver": "inline"
+      },
+      "fingerprint": "sha256:6428bea0911219e8d02f77d73ab8bc6c78037291c6b69de9f31e89e98bdb880a",
+      "ingredients": [
+        "requirements",
+        "acceptance-criteria"
+      ],
+      "reconciled": {
+        "requirements": "sha256:a73aa5b82f0e71f9e93dc9a61bcbea9e50ff833f59ab16a9c6bc705b847adcc6",
+        "acceptance-criteria": "sha256:04c53df478872e75252bc0e8e929507d9e2c1584aa6ae850a9ce05cf0806608f"
+      },
+      "suspectIngredients": [],
+      "provenance": {
+        "issue": null
+      },
+      "unresolved": false,
+      "resolveError": null
+    },
+    {
+      "id": "product-brief",
+      "type": "product-brief",
+      "tier": "discovery",
+      "status": "present",
+      "source": {
+        "kind": "inline",
+        "resolver": "inline"
+      },
+      "fingerprint": "sha256:65474e1d5454cbda9da90f60d8f9e2d1b16384c5862f6ff396ed94aec83fd5fd",
+      "ingredients": [],
+      "reconciled": {},
+      "suspectIngredients": [],
+      "provenance": {
+        "issue": null
+      },
+      "unresolved": false,
+      "resolveError": null
+    },
+    {
+      "id": "requirements",
+      "type": "requirements",
+      "tier": "requirements",
+      "status": "present",
+      "source": {
+        "kind": "inline",
+        "resolver": "inline"
+      },
+      "fingerprint": "sha256:a73aa5b82f0e71f9e93dc9a61bcbea9e50ff833f59ab16a9c6bc705b847adcc6",
+      "ingredients": [
+        "product-brief"
+      ],
+      "reconciled": {
+        "product-brief": "sha256:65474e1d5454cbda9da90f60d8f9e2d1b16384c5862f6ff396ed94aec83fd5fd"
+      },
+      "suspectIngredients": [],
+      "provenance": {
+        "issue": null
+      },
+      "unresolved": false,
+      "resolveError": null
+    },
+    {
+      "id": "test-plan",
+      "type": "test-plan",
+      "tier": "delivery",
+      "status": "present",
+      "source": {
+        "kind": "inline",
+        "resolver": "inline"
+      },
+      "fingerprint": "sha256:1db60e713e10a9b00f9e0fde0458b5d7f78dcef1b04ada183371dad346c34322",
+      "ingredients": [
+        "acceptance-criteria"
+      ],
+      "reconciled": {
+        "acceptance-criteria": "sha256:04c53df478872e75252bc0e8e929507d9e2c1584aa6ae850a9ce05cf0806608f"
+      },
+      "suspectIngredients": [],
+      "provenance": {
+        "issue": null
+      },
+      "unresolved": false,
+      "resolveError": null
+    }
+  ],
+  "edges": [
+    {
+      "from": "acceptance-criteria",
+      "to": "architecture-overview"
+    },
+    {
+      "from": "acceptance-criteria",
+      "to": "test-plan"
+    },
+    {
+      "from": "product-brief",
+      "to": "requirements"
+    },
+    {
+      "from": "requirements",
+      "to": "acceptance-criteria"
+    },
+    {
+      "from": "requirements",
+      "to": "architecture-overview"
+    }
+  ],
+  "suspects": [],
+  "gaps": [],
+  "gates": {
+    "ready-to-build": {
+      "pass": true,
+      "reasons": [],
+      "gaps": []
+    },
+    "ready-to-ship": {
+      "pass": true,
+      "reasons": [],
+      "gaps": []
+    }
+  }
+}

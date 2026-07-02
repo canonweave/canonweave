@@ -1,0 +1,32 @@
+# Traceweave ontology — generic-software template.
+# An ingredient edge child <- parent is legal only if the child type lists the
+# parent type in `ingredients`. Gate profiles name the required coverage sets.
+version: 1
+tiers: [discovery, requirements, architecture, delivery]
+types:
+  product-brief:
+    tier: discovery
+    ingredients: []
+  requirements:
+    tier: requirements
+    ingredients: [product-brief]
+  acceptance-criteria:
+    tier: requirements
+    ingredients: [requirements]
+  architecture-overview:
+    tier: architecture
+    ingredients: [requirements, acceptance-criteria]
+  adr:
+    tier: architecture
+    ingredients: [architecture-overview]
+  test-plan:
+    tier: delivery
+    ingredients: [acceptance-criteria]
+  runbook:
+    tier: delivery
+    ingredients: [architecture-overview]
+profiles:
+  ready-to-build:
+    required: [product-brief, requirements, acceptance-criteria, architecture-overview]
+  ready-to-ship:
+    required: [product-brief, requirements, acceptance-criteria, architecture-overview, test-plan]

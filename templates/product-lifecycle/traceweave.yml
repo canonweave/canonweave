@@ -1,0 +1,11 @@
+# traceweave.yml — product-lifecycle template (ported from the Exportdesk
+# Artifact Recipe Builder prototype: 21 types, 5 tiers).
+roots: [docs/trace]
+ontology: docs/trace/ontology.yml
+graph: docs/trace/graph.json
+gate: ready-to-build
+drafter:
+  backend: template
+sync:
+  issues: false
+resolvers: []

@@ -1,0 +1,20 @@
+{
+  "name": "@traceweave/engine",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Traceweave core engine \u2014 zero runtime dependencies (Node built-ins only). The dependency tree IS the audit.",
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/traceweavehq/traceweave.git",
+    "directory": "packages/engine"
+  },
+  "license": "Apache-2.0"
+}

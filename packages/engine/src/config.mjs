@@ -1,0 +1,137 @@
+// config.mjs — traceweave.yml loading + validation (design section 4.3).
+//
+// The config file lives at the consumer repo root. All relative paths in it are
+// resolved against the directory containing traceweave.yml (= repoRoot).
+// The resolver cache is FIXED at <repoRoot>/.traceweave/cache and is committed
+// by design (deterministic, offline-safe CI builds — design section 5).
+import { readFileSync, existsSync } from 'node:fs';
+import { dirname, join, resolve, isAbsolute } from 'node:path';
+import { parseYaml, YamlError } from './yaml.mjs';
+import { ConfigError } from './errors.mjs';
+
+export const CONFIG_FILENAME = 'traceweave.yml';
+
+// WS1 drafter backends. anthropic/openai are designed (section 7) and ship in
+// WS3 (AIW-232); naming them today is a config error with a clear pointer.
+const BACKENDS_AVAILABLE = ['template', 'cmd', 'none'];
+const BACKENDS_WS3 = ['anthropic', 'openai'];
+
+const KNOWN_KEYS = new Set(['roots', 'ontology', 'graph', 'gate', 'drafter', 'sync', 'resolvers']);
+
+function isSlugList(v) {
+  return Array.isArray(v) && v.every((x) => typeof x === 'string' && x.trim() !== '');
+}
+
+// Walk up from startDir looking for traceweave.yml. Returns absolute path or null.
+export function findConfigPath(startDir) {
+  let dir = resolve(startDir);
+  for (;;) {
+    const candidate = join(dir, CONFIG_FILENAME);
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+// Load + validate traceweave.yml. `configPath` must be the file itself.
+export function loadConfig(configPath) {
+  if (!existsSync(configPath)) {
+    throw new ConfigError('TW_CONFIG_NOT_FOUND',
+      `no ${CONFIG_FILENAME} found at ${configPath} — run "traceweave init" or pass --config`);
+  }
+  let raw;
+  try {
+    raw = parseYaml(readFileSync(configPath, 'utf8'));
+  } catch (e) {
+    if (e instanceof YamlError) {
+      throw new ConfigError('TW_CONFIG_YAML', `${configPath}: ${e.message}`);
+    }
+    throw e;
+  }
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new ConfigError('TW_CONFIG_SHAPE', `${configPath}: config must be a YAML map`);
+  }
+  for (const k of Object.keys(raw)) {
+    if (!KNOWN_KEYS.has(k)) {
+      throw new ConfigError('TW_CONFIG_UNKNOWN_KEY',
+        `${configPath}: unknown key "${k}" (known: ${[...KNOWN_KEYS].join(', ')})`);
+    }
+  }
+
+  const repoRoot = dirname(resolve(configPath));
+  const abs = (p) => (isAbsolute(p) ? p : resolve(repoRoot, p));
+
+  // roots — where artifact files live (multi-root for monorepos).
+  const rootsRel = raw.roots === undefined ? ['docs/trace'] : raw.roots;
+  if (!isSlugList(rootsRel) || rootsRel.length === 0) {
+    throw new ConfigError('TW_CONFIG_ROOTS', `${configPath}: "roots" must be a non-empty list of paths`);
+  }
+
+  const ontologyRel = raw.ontology === undefined ? join(rootsRel[0], 'ontology.yml') : raw.ontology;
+  if (typeof ontologyRel !== 'string' || ontologyRel === '') {
+    throw new ConfigError('TW_CONFIG_ONTOLOGY', `${configPath}: "ontology" must be a path string`);
+  }
+  const graphRel = raw.graph === undefined ? join(rootsRel[0], 'graph.json') : raw.graph;
+  if (typeof graphRel !== 'string' || graphRel === '') {
+    throw new ConfigError('TW_CONFIG_GRAPH', `${configPath}: "graph" must be a path string`);
+  }
+
+  const gateProfile = raw.gate === undefined ? 'ready-to-build' : raw.gate;
+  if (typeof gateProfile !== 'string' || gateProfile === '') {
+    throw new ConfigError('TW_CONFIG_GATE', `${configPath}: "gate" must be a gate profile name`);
+  }
+
+  // drafter
+  const drafterRaw = raw.drafter === undefined ? {} : raw.drafter;
+  if (drafterRaw === null || typeof drafterRaw !== 'object' || Array.isArray(drafterRaw)) {
+    throw new ConfigError('TW_CONFIG_DRAFTER', `${configPath}: "drafter" must be a map`);
+  }
+  const backend = drafterRaw.backend === undefined ? 'template' : drafterRaw.backend;
+  if (BACKENDS_WS3.includes(backend)) {
+    throw new ConfigError('TW_CONFIG_DRAFTER_WS3',
+      `${configPath}: drafter backend "${backend}" ships in WS3 (AI reconcile loop). ` +
+      `Available now: ${BACKENDS_AVAILABLE.join(' | ')}`);
+  }
+  if (!BACKENDS_AVAILABLE.includes(backend)) {
+    throw new ConfigError('TW_CONFIG_DRAFTER_BACKEND',
+      `${configPath}: unknown drafter backend "${backend}" (available: ${BACKENDS_AVAILABLE.join(' | ')})`);
+  }
+  const drafter = { backend };
+  if (backend === 'cmd') {
+    if (!isSlugList(drafterRaw.command) || drafterRaw.command.length === 0) {
+      throw new ConfigError('TW_CONFIG_DRAFTER_CMD',
+        `${configPath}: drafter backend "cmd" requires "command" — a list [argv0, arg1, ...]; ` +
+        `the prompt is appended as the final argument`);
+    }
+    drafter.command = drafterRaw.command;
+  }
+
+  // sync
+  const syncRaw = raw.sync === undefined ? {} : raw.sync;
+  if (syncRaw === null || typeof syncRaw !== 'object' || Array.isArray(syncRaw)) {
+    throw new ConfigError('TW_CONFIG_SYNC', `${configPath}: "sync" must be a map`);
+  }
+  const sync = { issues: syncRaw.issues === true };
+
+  // resolver plugin modules
+  const resolversRel = raw.resolvers === undefined ? [] : raw.resolvers;
+  if (!isSlugList(resolversRel) && !(Array.isArray(resolversRel) && resolversRel.length === 0)) {
+    throw new ConfigError('TW_CONFIG_RESOLVERS', `${configPath}: "resolvers" must be a list of module paths`);
+  }
+
+  return {
+    configPath: resolve(configPath),
+    repoRoot,
+    roots: rootsRel.map(abs),
+    rootsRel,
+    ontologyPath: abs(ontologyRel),
+    graphPath: abs(graphRel),
+    gateProfile,
+    drafter,
+    sync,
+    resolverModules: resolversRel.map(abs),
+    resolverModulesRel: resolversRel,
+    cacheDir: join(repoRoot, '.traceweave', 'cache'),
+  };
+}

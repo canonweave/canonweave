@@ -1,0 +1,73 @@
+# Traceweave ontology — product-lifecycle template.
+# Ported 1:1 from the prototype ontology.json (Exportdesk Artifact Recipe
+# Builder): 21 artifact types across 5 tiers. The prototype's single
+# requiredForGate set becomes the named profile "ready-to-build".
+version: 1
+tiers: [discovery, ux, requirements, architecture, delivery]
+types:
+  pr-faq:
+    tier: discovery
+    ingredients: []
+  four-risk-ledger:
+    tier: discovery
+    ingredients: [pr-faq]
+  customer-journey-map:
+    tier: discovery
+    ingredients: [pr-faq]
+  user-flow:
+    tier: ux
+    ingredients: [customer-journey-map]
+  service-blueprint:
+    tier: ux
+    ingredients: [customer-journey-map]
+  information-architecture:
+    tier: ux
+    ingredients: [user-flow]
+  screen-map:
+    tier: ux
+    ingredients: [user-flow, information-architecture]
+  swimlane:
+    tier: ux
+    ingredients: [customer-journey-map, service-blueprint]
+  acceptance-criteria:
+    tier: requirements
+    ingredients: [customer-journey-map, pr-faq]
+  scope-p0p1p2:
+    tier: requirements
+    ingredients: [acceptance-criteria]
+  role-access-model:
+    tier: requirements
+    ingredients: [acceptance-criteria]
+  c4:
+    tier: architecture
+    ingredients: [acceptance-criteria, scope-p0p1p2]
+  erd:
+    tier: architecture
+    ingredients: [acceptance-criteria]
+  state-diagrams:
+    tier: architecture
+    ingredients: [acceptance-criteria, erd]
+  sequence-diagrams:
+    tier: architecture
+    ingredients: [c4, acceptance-criteria]
+  deployment-view:
+    tier: architecture
+    ingredients: [c4]
+  adrs:
+    tier: architecture
+    ingredients: [c4]
+  constitution:
+    tier: architecture
+    ingredients: []
+  tasks:
+    tier: delivery
+    ingredients: [acceptance-criteria, scope-p0p1p2]
+  code:
+    tier: delivery
+    ingredients: [c4, acceptance-criteria]
+  tests:
+    tier: delivery
+    ingredients: [acceptance-criteria]
+profiles:
+  ready-to-build:
+    required: [pr-faq, four-risk-ledger, customer-journey-map, user-flow, acceptance-criteria, scope-p0p1p2, role-access-model, c4, erd, state-diagrams, adrs, constitution]
