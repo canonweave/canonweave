@@ -269,7 +269,11 @@ async function syncProject({ gql, repo, ordered, issueByNode, summary, log }) {
   const ownerId = owner.json.data.repositoryOwner.id;
 
   const found = await gql.run(Q_FIND, { login, q: title });
-  if (!found.ok) { summary.projectSkipped = `project lookup failed (HTTP ${found.status})`; return; }
+  if (!found.ok) {
+    const why = found.json && found.json.errors ? found.json.errors[0].message : `HTTP ${found.status}`;
+    summary.projectSkipped = `no Projects v2 access (${why}) — set CANONWEAVE_PROJECTS_TOKEN to sync the board`;
+    return;
+  }
   let project = (found.json.data.repositoryOwner.projectsV2.nodes || []).find((p) => p.title === title) || null;
   if (!project) {
     const created = await gql.run(M_CREATE, { ownerId, title });
