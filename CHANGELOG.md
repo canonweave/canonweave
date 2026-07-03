@@ -7,6 +7,17 @@ contracts — changing their meaning is a MAJOR (docs/file-format.md).
 
 ## [Unreleased]
 
+### Added
+- `sync-issues` (WS4, design §8 — the work plane): project the graph into
+  GitHub Issues (one issue per artifact; native issue type best-effort with a
+  `canonweave:type:*` label fallback; tier/status labels; state-table body),
+  sub-issue relations for derivation edges (deterministic single-parent rule),
+  and a Projects v2 board with a `canonweave-status` field. Strictly one-way
+  (files are the record), idempotent (zero writes on an unchanged graph),
+  self-healing (deleted issues are re-created; the `provenance.issue`
+  frontmatter anchor re-binds). Consumer workflow:
+  `templates/github/canonweave-sync-issues.yml`; docs: `docs/sync-issues.md`.
+
 ## [0.1.0] — 2026-07-03
 
 First public release, as **canonweave** (renamed from the working name

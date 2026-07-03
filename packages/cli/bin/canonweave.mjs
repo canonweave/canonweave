@@ -12,6 +12,7 @@ import {
   resolveSource, fingerprint, loadResolverPlugins,
   parseFrontmatter, serializeFrontmatter,
   reconcileDraft, reconcileApply,
+  syncIssues,
 } from '../../engine/src/index.mjs';
 import { runInit, availableTemplates } from '../src/init.mjs';
 import { runSelftest } from '../src/selftest.mjs';
@@ -39,7 +40,10 @@ function usage() {
     '  reconcile <id>                 DRAFT the corrected downstream artifact -> .canonweave/proposals/.',
     '  reconcile <id> --apply         APPLY the draft, clear the suspect link(s), rebuild graph.json.',
     '  selftest                       Hermetic deterministic self-test (template drafter, no network).',
-    '  sync-issues                    (ships in WS4 — Issues/Projects projection)',
+    '  sync-issues                    Project the graph into GitHub Issues + a Projects v2',
+    '                                 board — strictly one-way (files are the record). Needs',
+    '                                 GITHUB_TOKEN + GITHUB_REPOSITORY; board phase needs a',
+    '                                 project-scoped token (CANONWEAVE_PROJECTS_TOKEN).',
     '  serve                          (ships in WS6 — local read-only dashboard)',
     '',
     `Config: nearest ${CONFIG_FILENAME} upward from cwd, or --config <path>.`,
@@ -232,8 +236,12 @@ async function main() {
       process.exitCode = ok ? EXIT.PASS : EXIT.GATE_FAIL;
       break;
     }
-    case 'sync-issues':
-      throw new ConfigError('TW_NOT_YET', 'sync-issues ships in WS4 (Issues/Projects projection — one-way files -> GitHub)');
+    case 'sync-issues': {
+      const cfg = getConfig(cfgFlag.value);
+      const { byId, graph } = await computeGraph(cfg);
+      await syncIssues({ cfg, byId, graph });
+      break;
+    }
     case 'serve':
       throw new ConfigError('TW_NOT_YET', 'serve ships in WS6 (local read-only dashboard)');
     default:

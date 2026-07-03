@@ -29,12 +29,12 @@ Full walkthrough: [docs/quickstart.md](docs/quickstart.md)
 | path | what |
 |---|---|
 | `packages/engine` | zero-dep core: config, schema, ontology, resolvers, fingerprints, graph, gates, reconcile |
-| `packages/cli` | the `canonweave` binary: init/build/check/gate/fingerprint/clear/reconcile/selftest |
+| `packages/cli` | the `canonweave` binary: init/build/check/gate/fingerprint/clear/reconcile/sync-issues/selftest |
 | `packages/reconcile-action` | the reconcile GitHub Action: idempotent AI fix PRs for suspect links (docs/reconcile.md) |
 | `packages/action` | the gate as a GitHub Action: inline annotations, sticky PR comment, job summary, fork-safe ([usage](packages/action/README.md)) |
 | `templates/` | `generic-software`, `product-lifecycle` ontology templates |
 | `examples/demo-repo` | living fixture: docs demo + CI drift check |
-| `docs/` | [quickstart](docs/quickstart.md) · [file formats](docs/file-format.md) · [gate profiles](docs/gate-profiles.md) · [reconcile loop](docs/reconcile.md) · [security](docs/security.md) |
+| `docs/` | [quickstart](docs/quickstart.md) · [file formats](docs/file-format.md) · [gate profiles](docs/gate-profiles.md) · [reconcile loop](docs/reconcile.md) · [issues/board projection](docs/sync-issues.md) · [security](docs/security.md) |
 
 ## Verify a checkout
 
