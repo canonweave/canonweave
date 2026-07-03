@@ -7,6 +7,8 @@ contracts — changing their meaning is a MAJOR (docs/file-format.md).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07-03
+
 ### Added
 - `sync-issues` (WS4, design §8 — the work plane): project the graph into
   GitHub Issues (one issue per artifact; native issue type best-effort with a

@@ -1,7 +1,7 @@
 {
   "name": "@canonweave/action",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Canonweave gate as a GitHub Action: engine-backed gate, inline annotations on suspect artifact lines, one sticky PR comment updated in place, job summary, fork-safe degradation, CLI exit-code contract. Zero runtime dependencies.",
   "type": "module",
   "main": "index.mjs",

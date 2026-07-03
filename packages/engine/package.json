@@ -1,7 +1,7 @@
 {
   "name": "@canonweave/engine",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Canonweave core engine \u2014 zero runtime dependencies (Node built-ins only). The dependency tree IS the audit.",
   "type": "module",
   "main": "src/index.mjs",
