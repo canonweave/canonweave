@@ -49,7 +49,10 @@ function fp8(fp) { return fp && String(fp).startsWith('sha256:') ? fp.slice(7, 1
 // Deterministic issue body — NO timestamps, so an unchanged graph produces a
 // byte-identical body and the drift diff sees "no change".
 export function issueBodyFor(node, rec, { serverUrl, repo, refName, repoRoot }) {
-  const rel = rec.path.startsWith(repoRoot) ? rec.path.slice(repoRoot.length + 1) : rec.path;
+  // POSIX separators regardless of host OS — the link and the display path are
+  // GitHub-side surfaces (the WS5 Windows lesson: never ship win32 separators).
+  const rel = (rec.path.startsWith(repoRoot) ? rec.path.slice(repoRoot.length + 1) : rec.path)
+    .split('\\').join('/');
   const fileUrl = `${serverUrl}/${repo}/blob/${refName}/${rel}`;
   const status = boardStatus(node);
   const lines = [
