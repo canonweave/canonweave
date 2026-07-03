@@ -1,4 +1,4 @@
-# Traceweave gate action — the enforcement plane (design section 6).
+# Canonweave gate action — the enforcement plane (design section 6).
 # Gate mode needs NO secrets. GITHUB_TOKEN is only used for the sticky PR
 # comment and is optional: without it (fork PRs, withheld permissions) the run
 # degrades to annotations + job summary, still pass/fail.
@@ -8,25 +8,25 @@
 #     contents: read
 #     checks: write          # annotations attach to the job's check run
 #     pull-requests: write   # sticky comment (omit on forks; degrades cleanly)
-# Consumer workflow template: templates/github/traceweave-gate.yml
-name: traceweave-gate
+# Consumer workflow template: templates/github/canonweave-gate.yml
+name: canonweave-gate
 description: >-
-  Gate a repository on its Traceweave artifact graph: required coverage
+  Gate a repository on its Canonweave artifact graph: required coverage
   present, every ingredient link fresh, every source resolved. Inline
   annotations on suspect artifact files, one sticky PR comment updated in
   place, job summary, CLI exit-code contract (0 pass / 1 gate fail / 2 config
   error / 3 resolve error).
-author: traceweave
+author: canonweave
 branding:
   icon: git-merge
   color: purple
 inputs:
   profile:
-    description: Gate profile name (defaults to the repo's traceweave.yml `gate`)
+    description: Gate profile name (defaults to the repo's canonweave.yml `gate`)
     required: false
     default: ''
   config:
-    description: Path to traceweave.yml, relative to the workspace (defaults to auto-discovery from the workspace root)
+    description: Path to canonweave.yml, relative to the workspace (defaults to auto-discovery from the workspace root)
     required: false
     default: ''
 outputs:

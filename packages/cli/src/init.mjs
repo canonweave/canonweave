@@ -1,4 +1,4 @@
-// init.mjs — `traceweave init --template <name>`: copy a template into the
+// init.mjs — `canonweave init --template <name>`: copy a template into the
 // target directory, then auto-reconcile every ingredient link so the fresh
 // skeleton starts green (reconciled fingerprints match the template content —
 // deterministic, since template content is fixed).

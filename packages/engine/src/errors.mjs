@@ -1,4 +1,4 @@
-// errors.mjs — Traceweave error taxonomy, mapped to the CLI exit-code contract.
+// errors.mjs — Canonweave error taxonomy, mapped to the CLI exit-code contract.
 //
 // Exit codes (design §6, versioned contract):
 //   0  gate pass / verb success
@@ -17,7 +17,7 @@ export const EXIT = Object.freeze({
   RESOLVE_ERROR: 3,
 });
 
-// Frontmatter schema version this engine understands (the `traceweave:` key).
+// Frontmatter schema version this engine understands (the `canonweave:` key).
 export const SCHEMA_VERSION = 1;
 // Ontology file format version (the `version:` key in ontology.yml).
 export const ONTOLOGY_VERSION = 1;

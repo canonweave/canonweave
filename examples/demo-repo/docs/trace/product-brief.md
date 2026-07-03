@@ -1,5 +1,5 @@
 ---
-traceweave: 1
+canonweave: 1
 id: product-brief
 type: product-brief
 title: Product Brief

@@ -2,7 +2,7 @@
 
 export function renderCheck(graph) {
   const L = [];
-  L.push('Traceweave — coverage & suspect report');
+  L.push('Canonweave — coverage & suspect report');
   L.push('='.repeat(54));
   L.push(`nodes: ${graph.nodes.length}   edges: ${graph.edges.length}   suspects: ${graph.suspects.length}   gaps: ${graph.gaps.length}`);
   L.push('');

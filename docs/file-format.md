@@ -11,7 +11,7 @@ one artifact. YAML frontmatter is the recipe; the body is the content (for
 
 ```yaml
 ---
-traceweave: 1                    # REQUIRED — schema version key
+canonweave: 1                    # REQUIRED — schema version key
 id: acceptance-criteria          # REQUIRED — stable identity, NOT the filename
 type: acceptance-criteria        # REQUIRED — must exist in the ontology
 title: Acceptance Criteria       # optional
@@ -38,11 +38,11 @@ Unknown top-level keys are preserved on rewrite (forward compatibility).
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Traceweave artifact frontmatter, schema v1",
+  "title": "Canonweave artifact frontmatter, schema v1",
   "type": "object",
-  "required": ["traceweave", "id", "type"],
+  "required": ["canonweave", "id", "type"],
   "properties": {
-    "traceweave": { "const": 1 },
+    "canonweave": { "const": 1 },
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
     "type": { "type": "string" },
     "title": { "type": "string" },
@@ -115,7 +115,7 @@ committed bytes — the graph is always written with LF.
 
 ```
 {
-  traceweave: 1,
+  canonweave: 1,
   generatedAt: null,
   defaultProfile: "ready-to-build",
   nodes: [ { id, type, tier, status, source{kind,resolver,...}, fingerprint,
@@ -147,14 +147,14 @@ Stable machine codes; part of the public contract.
 
 | code | thrown when |
 |---|---|
-| TW_CONFIG_NOT_FOUND / TW_CONFIG_YAML / TW_CONFIG_SHAPE | traceweave.yml missing / unparseable / not a map |
+| TW_CONFIG_NOT_FOUND / TW_CONFIG_YAML / TW_CONFIG_SHAPE | canonweave.yml missing / unparseable / not a map |
 | TW_CONFIG_UNKNOWN_KEY | unknown top-level config key |
 | TW_CONFIG_ROOTS / TW_CONFIG_ONTOLOGY / TW_CONFIG_GRAPH / TW_CONFIG_GATE | malformed path/profile fields |
 | TW_CONFIG_DRAFTER / TW_CONFIG_DRAFTER_BACKEND / TW_CONFIG_DRAFTER_CMD | malformed drafter block |
 | TW_CONFIG_DRAFTER_MODEL | drafter backend `openai` without a `model` (no universal default) |
 | TW_CONFIG_SYNC / TW_CONFIG_RESOLVERS | malformed sync / resolvers block |
 | TW_SCHEMA_NO_FRONTMATTER / TW_SCHEMA_YAML | artifact missing/unparseable frontmatter |
-| TW_SCHEMA_MISSING_VERSION / TW_SCHEMA_UNSUPPORTED_VERSION | `traceweave:` key absent / wrong |
+| TW_SCHEMA_MISSING_VERSION / TW_SCHEMA_UNSUPPORTED_VERSION | `canonweave:` key absent / wrong |
 | TW_SCHEMA_MISSING_ID / TW_SCHEMA_BAD_ID / TW_SCHEMA_MISSING_TYPE | identity fields |
 | TW_SCHEMA_BAD_SOURCE / TW_SCHEMA_BAD_RECIPE / TW_SCHEMA_BAD_INGREDIENTS / TW_SCHEMA_BAD_BUILD | source/recipe shape |
 | TW_SCHEMA_BAD_RECONCILED / TW_SCHEMA_BAD_STATUS / TW_SCHEMA_BAD_PROVENANCE | reconciled/status/provenance shape |

@@ -8,7 +8,7 @@
 - **Determinism is a contract.** Same inputs must produce a byte-identical
   `graph.json` — no clocks, no randomness, no map-iteration ambiguity. The
   determinism snapshot in CI is non-negotiable.
-- **Format changes are versioned.** Frontmatter schema (`traceweave: 1`),
+- **Format changes are versioned.** Frontmatter schema (`canonweave: 1`),
   ontology version, fingerprint normalization, and the `TW_*` error codes are
   public contracts (see [docs/file-format.md](docs/file-format.md)); changing
   their meaning is a major version.
@@ -16,8 +16,8 @@
 ## Working on the repo
 
 ```bash
-git clone https://github.com/traceweavehq/traceweave
-cd traceweave
+git clone https://github.com/canonweave/canonweave
+cd canonweave
 npm test        # CLI selftest + action selftest + determinism + zero-deps — no install step
 ```
 

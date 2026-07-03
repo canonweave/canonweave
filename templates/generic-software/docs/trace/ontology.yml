@@ -1,4 +1,4 @@
-# Traceweave ontology — generic-software template.
+# Canonweave ontology — generic-software template.
 # An ingredient edge child <- parent is legal only if the child type lists the
 # parent type in `ingredients`. Gate profiles name the required coverage sets.
 version: 1

@@ -14,8 +14,8 @@ import { execFileSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..');
-const BIN = join(REPO, 'packages', 'cli', 'bin', 'traceweave.mjs');
-const SCRATCH = join(tmpdir(), 'traceweave-determinism');
+const BIN = join(REPO, 'packages', 'cli', 'bin', 'canonweave.mjs');
+const SCRATCH = join(tmpdir(), 'canonweave-determinism');
 
 let failures = 0;
 function report(name, ok, detail = '') {
@@ -54,7 +54,7 @@ function checkTemplate(template) {
   const b = join(SCRATCH, `${template}-b`);
   cpSync(a, b, { recursive: true });
   crlfTree(join(b, 'docs'));
-  writeFileSync(join(b, 'traceweave.yml'), readFileSync(join(b, 'traceweave.yml'), 'utf8').replace(/\n/g, '\r\n'), 'utf8');
+  writeFileSync(join(b, 'canonweave.yml'), readFileSync(join(b, 'canonweave.yml'), 'utf8').replace(/\n/g, '\r\n'), 'utf8');
   run(['build'], b);
   const g3 = graphBytes(b);
   report(`${template}: CRLF checkout -> byte-identical graph.json (section 4.5)`, g1 === g3);
@@ -62,7 +62,7 @@ function checkTemplate(template) {
 
 function checkDemoRepo() {
   const demo = join(REPO, 'examples', 'demo-repo');
-  if (!existsSync(join(demo, 'traceweave.yml'))) {
+  if (!existsSync(join(demo, 'canonweave.yml'))) {
     report('examples/demo-repo exists', false, 'missing — generate it with init and commit it');
     return;
   }

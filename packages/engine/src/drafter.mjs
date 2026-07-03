@@ -1,7 +1,7 @@
 // drafter.mjs — pluggable drafter that produces the CORRECTED downstream
 // artifact content for the reconcile loop.
 //
-// WS1 backends (drafter.backend in traceweave.yml):
+// WS1 backends (drafter.backend in canonweave.yml):
 //   template  — deterministic stub, NO network. The hermetic selftest backend.
 //   cmd       — run a configured CLI (drafter.command: [argv0, arg1, ...]);
 //               the assembled prompt is appended as the final argument and the
@@ -35,7 +35,7 @@ export function capInput(s) {
   if (str.length <= DRAFTER_INPUT_CAP) return str;
   const over = str.length - DRAFTER_INPUT_CAP;
   return str.slice(0, DRAFTER_INPUT_CAP) +
-    `\n[traceweave: input truncated — ${over} chars over the ${DRAFTER_INPUT_CAP}-char drafter cap]`;
+    `\n[canonweave: input truncated — ${over} chars over the ${DRAFTER_INPUT_CAP}-char drafter cap]`;
 }
 
 export function buildDraftPrompt(req) {

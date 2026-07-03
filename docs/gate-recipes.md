@@ -2,16 +2,16 @@
 
 The action fails the job per the exit-code contract; whether a failing job
 BLOCKS the merge is your repository's branch-protection / ruleset policy.
-Traceweave documents the recipe — it never controls your repo settings.
+Canonweave documents the recipe — it never controls your repo settings.
 
 ## 1. Wire the workflow
 
-Copy [templates/github/traceweave-gate.yml](../templates/github/traceweave-gate.yml)
-into `.github/workflows/traceweave-gate.yml`. It ships with:
+Copy [templates/github/canonweave-gate.yml](../templates/github/canonweave-gate.yml)
+into `.github/workflows/canonweave-gate.yml`. It ships with:
 
 - triggers: `pull_request`, `push` (default branch), `merge_group`
   (merge-queue), `workflow_dispatch`, optional `schedule` for a nightly drift audit;
-- `concurrency: traceweave-${{ github.ref }}` with cancel-in-progress on PRs;
+- `concurrency: canonweave-${{ github.ref }}` with cancel-in-progress on PRs;
 - least-privilege permissions (`contents: read`, `checks: write`,
   `pull-requests: write`) — gate mode itself needs **no secrets**.
 
@@ -49,8 +49,8 @@ all still work. Nothing to configure.
   suspect table, gap list, and per-profile verdicts;
 - the same report as the job summary (the fork-safe surface).
 
-Fix paths shown in every annotation: `traceweave reconcile <id>` (then
-`--apply`), or `traceweave clear <id> <ingredient>` when the change was
+Fix paths shown in every annotation: `canonweave reconcile <id>` (then
+`--apply`), or `canonweave clear <id> <ingredient>` when the change was
 reviewed and the downstream is still correct.
 
 ## 6. Different strictness per branch

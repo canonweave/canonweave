@@ -2,7 +2,7 @@
 // the corrected downstream artifact into a proposal file) then APPLY (write the
 // draft into the artifact, clear the suspect links, rebuild).
 //
-// Proposals live at <repoRoot>/.traceweave/proposals/<id>.proposal.md — review
+// Proposals live at <repoRoot>/.canonweave/proposals/<id>.proposal.md — review
 // artifacts, safe to commit. The proposal header carries the ONLY timestamp the
 // engine ever emits; it never enters graph.json (determinism invariant).
 // GitHub reconcile-PR mechanics (idempotent branch keys etc.) ship in WS3.
@@ -15,7 +15,7 @@ import { buildGraph } from './graph.mjs';
 import { draft as runDrafter, buildDraftPrompt } from './drafter.mjs';
 import { ConfigError } from './errors.mjs';
 
-export function proposalsDir(repoRoot) { return join(repoRoot, '.traceweave', 'proposals'); }
+export function proposalsDir(repoRoot) { return join(repoRoot, '.canonweave', 'proposals'); }
 export function proposalPath(repoRoot, id) { return join(proposalsDir(repoRoot), `${id}.proposal.md`); }
 
 function suspectLinksFor(graph, downstreamId) {
@@ -43,7 +43,7 @@ function renderProposal({ downstream, suspects, backend, kind, content, briefPro
   H.push('');
   if (kind === 'draft') {
     H.push(`<!-- Drafted by the ${backend} backend. Review, then apply with:`);
-    H.push(`     traceweave reconcile ${downstream.id} --apply -->`);
+    H.push(`     canonweave reconcile ${downstream.id} --apply -->`);
     H.push('');
     H.push(content.trimEnd());
     H.push('');
@@ -53,7 +53,7 @@ function renderProposal({ downstream, suspects, backend, kind, content, briefPro
     H.push(`No draft was produced (backend/CLI unavailable or brief mode), so this is a`);
     H.push(`CONCRETE brief instead of an auto-draft. It carries the full context an agent`);
     H.push(`(or a human) needs to re-derive **${downstream.id}**, after which the corrected`);
-    H.push(`content can be applied and the link cleared (\`traceweave clear\`).`);
+    H.push(`content can be applied and the link cleared (\`canonweave clear\`).`);
     H.push('');
     H.push('```');
     H.push(briefPrompt.trimEnd());
@@ -134,7 +134,7 @@ export function readProposal(repoRoot, id) {
   const ppath = proposalPath(repoRoot, id);
   if (!existsSync(ppath)) {
     throw new ConfigError('TW_NO_PROPOSAL',
-      `reconcile --apply: no proposal for "${id}" — run "traceweave reconcile ${id}" first`);
+      `reconcile --apply: no proposal for "${id}" — run "canonweave reconcile ${id}" first`);
   }
   const text = readFileSync(ppath, 'utf8');
   let parsed;
@@ -143,7 +143,7 @@ export function readProposal(repoRoot, id) {
   } catch (e) {
     throw new ConfigError('TW_PROPOSAL_PARSE',
       `reconcile --apply: proposal for "${id}" has unreadable frontmatter (${e.message}) — ` +
-      `re-run "traceweave reconcile ${id}" to regenerate it`);
+      `re-run "canonweave reconcile ${id}" to regenerate it`);
   }
   const { data, body } = parsed;
   const kind = (data && data.kind) || 'draft';

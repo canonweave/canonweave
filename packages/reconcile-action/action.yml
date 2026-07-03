@@ -1,4 +1,4 @@
-# Traceweave reconcile action — the AI plane (design section 7).
+# Canonweave reconcile action — the AI plane (design section 7).
 # When ingredient links go suspect, draft the corrected downstream artifacts
 # and open ONE idempotent reconcile PR per suspect downstream. Merging a
 # reconcile PR IS the review: the commit updates the artifact body AND its
@@ -7,20 +7,20 @@
 # Requires GITHUB_TOKEN with contents:write + pull-requests:write. The drafter
 # API key (for anthropic/openai backends) comes from a repo secret via env —
 # never from config, never from our infrastructure, never logged.
-# Consumer workflow template: templates/github/traceweave-reconcile.yml
-name: traceweave-reconcile
+# Consumer workflow template: templates/github/canonweave-reconcile.yml
+name: canonweave-reconcile
 description: >-
   Draft corrected downstream artifacts for suspect ingredient links and open
-  idempotent reconcile PRs (branch traceweave/reconcile/<id>--<fp8>; re-runs
+  idempotent reconcile PRs (branch canonweave/reconcile/<id>--<fp8>; re-runs
   update the open PR; a further upstream change closes the stale PR and opens
   the linked successor). Merging the PR clears the suspect link.
-author: traceweave
+author: canonweave
 branding:
   icon: git-pull-request
   color: purple
 inputs:
   config:
-    description: Path to traceweave.yml, relative to the workspace (defaults to auto-discovery from the workspace root)
+    description: Path to canonweave.yml, relative to the workspace (defaults to auto-discovery from the workspace root)
     required: false
     default: ''
 outputs:

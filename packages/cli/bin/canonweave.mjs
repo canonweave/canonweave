@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// traceweave — CLI verb router. Exit-code contract (design section 6):
+// canonweave — CLI verb router. Exit-code contract (design section 6):
 //   0 pass · 1 gate fail · 2 config/ontology error · 3 resolve error without cache
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -20,9 +20,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function usage() {
   return [
-    'traceweave — GitHub-native artifact traceability (files are the system of record)',
+    'canonweave — GitHub-native artifact traceability (files are the system of record)',
     '',
-    'USAGE: traceweave <verb> [args] [--config <path-to-traceweave.yml>]',
+    'USAGE: canonweave <verb> [args] [--config <path-to-canonweave.yml>]',
     '',
     'VERBS:',
     '  init [--template <name>] [--dir <path>]',
@@ -32,11 +32,11 @@ function usage() {
     '                                 suspects + per-profile gate verdicts, write graph.json.',
     '  check                          Human-readable suspect + coverage report (exit 0 unless',
     '                                 the repo itself is misconfigured).',
-    '  gate [--profile <name>]        Gate verdict for a profile (default from traceweave.yml).',
+    '  gate [--profile <name>]        Gate verdict for a profile (default from canonweave.yml).',
     '                                 exit 0 PASS / 1 FAIL / 2 config error / 3 resolve error.',
     '  fingerprint <id>               Resolve one node and print its sha256 fingerprint.',
     '  clear <id> <ingredient>        Mark an ingredient link reconciled to its current fingerprint.',
-    '  reconcile <id>                 DRAFT the corrected downstream artifact -> .traceweave/proposals/.',
+    '  reconcile <id>                 DRAFT the corrected downstream artifact -> .canonweave/proposals/.',
     '  reconcile <id> --apply         APPLY the draft, clear the suspect link(s), rebuild graph.json.',
     '  selftest                       Hermetic deterministic self-test (template drafter, no network).',
     '  sync-issues                    (ships in WS4 — Issues/Projects projection)',
@@ -66,7 +66,7 @@ function getConfig(configFlag) {
   const path = configFlag || findConfigPath(process.cwd());
   if (!path) {
     throw new ConfigError('TW_CONFIG_NOT_FOUND',
-      `no ${CONFIG_FILENAME} found from ${process.cwd()} upward — run "traceweave init" or pass --config`);
+      `no ${CONFIG_FILENAME} found from ${process.cwd()} upward — run "canonweave init" or pass --config`);
   }
   return loadConfig(path);
 }
@@ -182,7 +182,7 @@ async function doReconcile(cfg, args) {
     console.log(`  draft preview (first 8 lines, ${lines.length} total):`);
     for (const l of lines.slice(0, 8)) console.log(`    | ${l}`);
     if (lines.length > 8) console.log(`    | ... (+${lines.length - 8} more)`);
-    console.log(`  approve with: traceweave reconcile ${id} --apply`);
+    console.log(`  approve with: canonweave reconcile ${id} --apply`);
   } else {
     console.log(`no draft produced — wrote a concrete reconcile BRIEF -> ${relP}`);
     console.log(`  reason: ${r.error}`);
@@ -214,7 +214,7 @@ async function main() {
       const r = await runInit({ template: t.value, dir: d.value });
       console.log(`initialized ${r.templateName} template in ${r.targetDir}`);
       console.log(`  nodes: ${r.graph.nodes.length}, suspects: ${r.graph.suspects.length}, gaps: ${r.graph.gaps.length} (profile ${r.graph.defaultProfile})`);
-      console.log(`  next: cd ${r.targetDir} && traceweave check && traceweave gate`);
+      console.log(`  next: cd ${r.targetDir} && canonweave check && canonweave gate`);
       break;
     }
     case 'build': await doBuild(getConfig(cfgFlag.value)); break;
@@ -243,11 +243,11 @@ async function main() {
 
 main().catch((e) => {
   if (e instanceof ConfigError || e instanceof ResolveError || e.exitCode) {
-    console.error(`traceweave: ${e.message}`);
+    console.error(`canonweave: ${e.message}`);
     if (e.code && e.code.startsWith('TW_')) console.error(`  code: ${e.code}`);
     process.exitCode = e.exitCode || EXIT.CONFIG_ERROR;
   } else {
-    console.error(`traceweave: unexpected error: ${e && e.stack || e}`);
+    console.error(`canonweave: unexpected error: ${e && e.stack || e}`);
     process.exitCode = EXIT.CONFIG_ERROR;
   }
 });

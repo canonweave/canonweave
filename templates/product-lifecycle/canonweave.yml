@@ -1,4 +1,4 @@
-# traceweave.yml — product-lifecycle template (ported from the Exportdesk
+# canonweave.yml — product-lifecycle template (ported from the Exportdesk
 # Artifact Recipe Builder prototype: 21 types, 5 tiers).
 roots: [docs/trace]
 ontology: docs/trace/ontology.yml

@@ -1,5 +1,5 @@
 ---
-traceweave: 1
+canonweave: 1
 id: pr-faq
 type: pr-faq
 title: PR-FAQ (working backwards)

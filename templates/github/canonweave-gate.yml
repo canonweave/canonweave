@@ -1,13 +1,13 @@
-# Traceweave gate workflow — copy into .github/workflows/traceweave-gate.yml
-# of any repo that has a traceweave.yml (design section 6).
+# Canonweave gate workflow — copy into .github/workflows/canonweave-gate.yml
+# of any repo that has a canonweave.yml (design section 6).
 #
 # Gate mode needs NO secrets. The default GITHUB_TOKEN is used only for the
 # sticky PR comment; on fork PRs it is read-only and the run degrades to
 # annotations + job summary, still pass/fail.
 #
 # Make it a MERGE BLOCKER with branch protection / rulesets — recipe:
-# docs/gate-recipes.md in the traceweave repo.
-name: traceweave-gate
+# docs/gate-recipes.md in the canonweave repo.
+name: canonweave-gate
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ on:
   #   - cron: '17 2 * * *'
 
 concurrency:
-  group: traceweave-${{ github.ref }}
+  group: canonweave-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -32,12 +32,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3 — pin actions by SHA
-      # Same-repo form (the traceweave monorepo gating itself):
+      # Same-repo form (the canonweave monorepo gating itself):
       - uses: ./packages/action
       # Cross-repo form once published (WS5) — pin by SHA, not tag:
-      # - uses: traceweavehq/traceweave/packages/action@<pinned-sha>
+      # - uses: canonweave/canonweave/packages/action@<pinned-sha>
         with:
-          profile: ''       # empty = the repo's traceweave.yml `gate` default
-          config: ''        # empty = auto-discover traceweave.yml
+          profile: ''       # empty = the repo's canonweave.yml `gate` default
+          config: ''        # empty = auto-discover canonweave.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

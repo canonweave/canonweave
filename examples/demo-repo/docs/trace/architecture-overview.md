@@ -1,5 +1,5 @@
 ---
-traceweave: 1
+canonweave: 1
 id: architecture-overview
 type: architecture-overview
 title: Architecture Overview

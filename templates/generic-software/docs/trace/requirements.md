@@ -1,5 +1,5 @@
 ---
-traceweave: 1
+canonweave: 1
 id: requirements
 type: requirements
 title: Requirements

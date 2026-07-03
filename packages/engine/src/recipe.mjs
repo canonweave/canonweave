@@ -1,7 +1,7 @@
 // recipe.mjs — artifact recipe files: frontmatter schema v1 parse/validate/serialize.
 //
-// Schema v1 (design section 4.1; `traceweave: 1` is the version key):
-//   traceweave: 1                      REQUIRED — schema version
+// Schema v1 (design section 4.1; `canonweave: 1` is the version key):
+//   canonweave: 1                      REQUIRED — schema version
 //   id: <slug>                         REQUIRED — stable identity, NOT the filename
 //   type: <slug>                       REQUIRED — must exist in the ontology
 //   title: <string>                    optional
@@ -47,12 +47,12 @@ export function validateRecipeData(data, file) {
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     fail('TW_SCHEMA_NO_FRONTMATTER', 'artifact file has no YAML frontmatter block');
   }
-  if (data.traceweave === undefined) {
-    fail('TW_SCHEMA_MISSING_VERSION', `missing "traceweave: ${SCHEMA_VERSION}" schema version key`);
+  if (data.canonweave === undefined) {
+    fail('TW_SCHEMA_MISSING_VERSION', `missing "canonweave: ${SCHEMA_VERSION}" schema version key`);
   }
-  if (data.traceweave !== SCHEMA_VERSION) {
+  if (data.canonweave !== SCHEMA_VERSION) {
     fail('TW_SCHEMA_UNSUPPORTED_VERSION',
-      `unsupported schema version ${JSON.stringify(data.traceweave)} (this engine reads schema v${SCHEMA_VERSION})`);
+      `unsupported schema version ${JSON.stringify(data.canonweave)} (this engine reads schema v${SCHEMA_VERSION})`);
   }
   if (typeof data.id !== 'string' || data.id === '') {
     fail('TW_SCHEMA_MISSING_ID', 'missing required "id"');
@@ -152,7 +152,7 @@ function serMapBlock(L, key, obj, order = [], indent = '') {
 export function serializeFrontmatter(data, body) {
   const L = [];
   L.push('---');
-  L.push(`traceweave: ${SCHEMA_VERSION}`);
+  L.push(`canonweave: ${SCHEMA_VERSION}`);
   if ('id' in data) L.push(`id: ${serScalar(data.id)}`);
   if ('type' in data) L.push(`type: ${serScalar(data.type)}`);
   if ('title' in data) L.push(`title: ${serScalar(data.title)}`);
@@ -173,7 +173,7 @@ export function serializeFrontmatter(data, body) {
   if ('provenance' in data && data.provenance && typeof data.provenance === 'object') {
     serMapBlock(L, 'provenance', data.provenance, ['issue']);
   }
-  const handled = new Set(['traceweave', 'id', 'type', 'title', 'tier', 'source', 'recipe', 'reconciled', 'owner', 'status', 'provenance']);
+  const handled = new Set(['canonweave', 'id', 'type', 'title', 'tier', 'source', 'recipe', 'reconciled', 'owner', 'status', 'provenance']);
   for (const k of Object.keys(data)) {
     if (handled.has(k)) continue;
     const v = data[k];

@@ -39,8 +39,8 @@ A profile names a coverage set. The pass rule per profile:
 Different phases use different profiles over the same graph:
 
 ```bash
-traceweave gate                            # default profile from traceweave.yml
-traceweave gate --profile ready-to-ship    # stricter set, same graph
+canonweave gate                            # default profile from canonweave.yml
+canonweave gate --profile ready-to-ship    # stricter set, same graph
 ```
 
 `graph.json` records verdicts for ALL profiles on every build (`gates.<name>`),

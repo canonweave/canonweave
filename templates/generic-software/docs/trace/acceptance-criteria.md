@@ -1,5 +1,5 @@
 ---
-traceweave: 1
+canonweave: 1
 id: acceptance-criteria
 type: acceptance-criteria
 title: Acceptance Criteria (Given/When/Then)

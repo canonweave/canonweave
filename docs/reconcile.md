@@ -12,7 +12,7 @@ briefs in the job summary — nothing breaks.
 
 ## Drafter backends
 
-Configured in `traceweave.yml` under `drafter:`.
+Configured in `canonweave.yml` under `drafter:`.
 
 | backend | mechanism | key | notes |
 |---|---|---|---|
@@ -40,7 +40,7 @@ drafter:
 One PR per suspect **downstream**, branch:
 
 ```
-traceweave/reconcile/<downstream-id>--<fp8>
+canonweave/reconcile/<downstream-id>--<fp8>
 ```
 
 `fp8` = first 8 hex of the NEW primary-upstream fingerprint. The branch name
@@ -58,13 +58,13 @@ rule applied, the drafter backend + model, and the full proposal. The commit
 touches the artifact file, its `reconciled` map, and `graph.json` — merging
 needs no follow-up build.
 
-Labels: `traceweave:reconcile` (best-effort). Use CODEOWNERS on your artifact
+Labels: `canonweave:reconcile` (best-effort). Use CODEOWNERS on your artifact
 roots to route the review to the artifact owner automatically.
 
 ## Workflow setup
 
 ```bash
-cp <traceweave>/templates/github/traceweave-reconcile.yml .github/workflows/
+cp <canonweave>/templates/github/canonweave-reconcile.yml .github/workflows/
 ```
 
 Triggers: push to the default branch (the run no-ops when the graph is
@@ -76,7 +76,7 @@ Actions → General → Workflow permissions → check **"Allow GitHub Actions t
 create and approve pull requests."** Without it the branch pushes but the
 PR POST returns 403 (the action tells you exactly this).
 
-The gate workflow (`traceweave-gate.yml`) stays the merge blocker; the
+The gate workflow (`canonweave-gate.yml`) stays the merge blocker; the
 reconcile workflow is the fixer. They compose: push breaks a link → gate
 blocks PRs → reconcile PR appears → review + merge → gate green.
 

@@ -1,4 +1,4 @@
-// yaml.mjs — minimal YAML-subset parser for Traceweave files (zero-dep).
+// yaml.mjs — minimal YAML-subset parser for Canonweave files (zero-dep).
 //
 // The subset (documented in docs/file-format.md; anything outside it errors):
 //   - maps:        `key: value` or `key:` followed by a deeper-indented block
@@ -119,7 +119,7 @@ function parseList(toks, i, indent) {
     const t = toks[i];
     const item = t.text === '-' ? '' : t.text.slice(2).trim();
     if (/^[^"'\s][^:]*:(\s|$)/.test(item)) {
-      throw new YamlError('lists of maps are not supported in the Traceweave YAML subset', t.line);
+      throw new YamlError('lists of maps are not supported in the Canonweave YAML subset', t.line);
     }
     arr.push(parseScalar(item));
     i++;
