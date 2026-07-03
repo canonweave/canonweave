@@ -1,0 +1,55 @@
+# Canonweave sync-issues workflow — copy into .github/workflows/ of any repo
+# that runs the canonweave gate (design section 8: the work plane).
+#
+# Projects the artifact graph into GitHub's native work surfaces — one issue
+# per artifact (type/tier/status labels, state table, file link), derivation
+# edges as sub-issue relations, and a Projects v2 board with a canonweave-status
+# field. STRICTLY ONE-WAY: files -> GitHub. Issue edits never mutate files;
+# a deleted issue is re-created on the next sync.
+#
+# The only file write is the provenance.issue binding anchor in artifact
+# frontmatter (hash-safe: fingerprints cover the body only) — this workflow
+# commits those anchors back when first projecting an artifact.
+#
+# Projects v2 note: the Actions GITHUB_TOKEN cannot access Projects v2. Add a
+# fine-grained token with project scope as the CANONWEAVE_PROJECTS_TOKEN secret
+# to sync the board; without it the board phase skips cleanly and issues,
+# labels, and sub-issues still sync.
+name: canonweave-sync-issues
+
+on:
+  push:
+    branches: [main]        # adjust to your default branch
+  workflow_dispatch:
+
+concurrency:
+  group: canonweave-sync-issues
+  cancel-in-progress: false  # syncs queue; drift-diffed writes make re-runs cheap
+
+permissions:
+  contents: write           # commit the provenance.issue binding anchors
+  issues: write             # create/update the projected issues
+
+jobs:
+  sync-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3 — pin actions by SHA
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.1.0
+        with:
+          node-version: 22
+      - name: sync
+        run: npx --yes canonweave@^0.1 sync-issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Projects v2 board (optional — see the header note):
+          CANONWEAVE_PROJECTS_TOKEN: ${{ secrets.CANONWEAVE_PROJECTS_TOKEN }}
+      - name: commit binding anchors (first projection only)
+        run: |
+          if ! git diff --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -A
+            git commit -m 'canonweave sync-issues: bind provenance.issue anchors'
+            git push
+          fi

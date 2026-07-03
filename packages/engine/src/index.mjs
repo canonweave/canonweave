@@ -10,3 +10,4 @@ export { loadArtifacts, validateEdges, buildGraph, gateVerdict, assertResolved, 
 export { renderCheck, renderGate } from './report.mjs';
 export { draft, buildDraftPrompt, stripPreamble } from './drafter.mjs';
 export { reconcileDraft, reconcileApply, readProposal, proposalPath, proposalsDir } from './reconcile.mjs';
+export { syncIssues, boardStatus, issueBodyFor, desiredLabels, SYNC_MARKER } from './sync-issues.mjs';

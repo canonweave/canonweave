@@ -5,7 +5,7 @@ import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import {
   ConfigError,
@@ -46,7 +46,7 @@ const ONTOLOGY_FIXTURE = [
   '',
 ].join('\n');
 
-function configText({ gate = 'core', drafterBackend = 'template', resolvers = [] } = {}) {
+function configText({ gate = 'core', drafterBackend = 'template', resolvers = [], syncIssues = false } = {}) {
   const L = [
     'roots: [docs/trace]',
     'ontology: docs/trace/ontology.yml',
@@ -56,6 +56,7 @@ function configText({ gate = 'core', drafterBackend = 'template', resolvers = []
     `  backend: ${drafterBackend}`,
   ];
   if (resolvers.length) L.push(`resolvers: [${resolvers.map((r) => `"${r}"`).join(', ')}]`);
+  if (syncIssues) { L.push('sync:'); L.push('  issues: true'); }
   return L.join('\n') + '\n';
 }
 
@@ -114,10 +115,25 @@ async function expectCode(fn, code) {
   }
 }
 
-function runCli(args, cwd) {
+function runCliAsync(args, cwd, env) {
+  return new Promise((resolvePromise) => {
+    const child = spawn(process.execPath, [BIN, ...args], {
+      cwd, stdio: ['ignore', 'pipe', 'pipe'],
+      env: env ? { ...process.env, ...env } : process.env,
+    });
+    let stdout = '', stderr = '';
+    const timer = setTimeout(() => child.kill('SIGKILL'), 60000);
+    child.stdout.on('data', (c) => { stdout += c; });
+    child.stderr.on('data', (c) => { stderr += c; });
+    child.on('close', (code) => { clearTimeout(timer); resolvePromise({ status: code, stdout, stderr }); });
+  });
+}
+
+function runCli(args, cwd, env) {
   try {
     const stdout = execFileSync(process.execPath, [BIN, ...args], {
       cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000,
+      env: env ? { ...process.env, ...env } : process.env,
     });
     return { status: 0, stdout, stderr: '' };
   } catch (e) {
@@ -614,8 +630,207 @@ export async function runSelftest() {
     const rVerb = runCli(['no-such-verb'], gs);
     check('CLI exit 2: unknown verb', rVerb.status === 2, `status=${rVerb.status}`);
     const rWs = runCli(['sync-issues'], gs);
-    check('CLI exit 2: sync-issues/serve are explicit WS4/WS6 stubs', rWs.status === 2 && /WS4/.test(rWs.stderr), `status=${rWs.status}`);
+    check('CLI exit 2: sync-issues refuses when sync.issues is false', rWs.status === 2 && /TW_SYNC_DISABLED/.test(rWs.stderr), `status=${rWs.status}`);
+    const rServe = runCli(['serve'], gs);
+    check('CLI exit 2: serve is the explicit WS6 stub', rServe.status === 2 && /WS6/.test(rServe.stderr), `status=${rServe.status}`);
     // exit 3 covered in test 10 via the url repo.
+  }
+
+
+  // ===========================================================================
+  // 12. sync-issues (WS4) — one-way projection against a stateful fake GitHub
+  // ===========================================================================
+  {
+    // ---- fake GitHub: REST issues + sub-issues, GraphQL Projects v2 ----------
+    let ghLog = [];
+    let issueSeq = 0;
+    let issues = [];                 // {number,id,node_id,state,title,body,labels:[{name}],type:{name}|null}
+    const childParent = new Map();   // child issue number -> parent issue number
+    const project = { created: false, id: 'P_1', number: 7, title: null, field: null, items: [], itemSeq: 0 };
+
+    const findIssue = (n) => issues.find((i) => i.number === Number(n));
+    const gqlHandlers = {
+      CwOwner: (v, auth) => auth === 'Bearer no-projects-token'
+        ? { errors: [{ message: 'Resource not accessible by integration' }] }
+        : { data: { repositoryOwner: { __typename: 'Organization', id: 'ORG_1' } } },
+      CwFindProject: (v) => ({ data: { repositoryOwner: { projectsV2: { nodes: project.created ? [{ id: project.id, title: project.title, number: project.number }] : [] } } } }),
+      CwCreateProject: (v) => { project.created = true; project.title = v.title; return { data: { createProjectV2: { projectV2: { id: project.id, number: project.number } } } }; },
+      CwFields: () => ({ data: { node: { fields: { nodes: project.field ? [project.field] : [] } } } }),
+      CwCreateField: (v) => {
+        project.field = { id: 'F_1', name: v.name, options: v.opts.map((o, i) => ({ id: `O_${i}`, name: o.name })) };
+        return { data: { createProjectV2Field: { projectV2Field: project.field } } };
+      },
+      CwItems: () => ({ data: { node: { items: {
+        pageInfo: { hasNextPage: false, endCursor: null },
+        nodes: project.items.map((it) => ({
+          id: it.id,
+          fieldValueByName: it.status ? { name: it.status } : null,
+          content: { number: it.issueNumber },
+        })),
+      } } } }),
+      CwAddItem: (v) => {
+        const issue = issues.find((i) => i.node_id === v.contentId);
+        const item = { id: `I_${++project.itemSeq}`, issueNumber: issue.number, status: null };
+        project.items.push(item);
+        return { data: { addProjectV2ItemById: { item: { id: item.id } } } };
+      },
+      CwSetStatus: (v) => {
+        const item = project.items.find((i) => i.id === v.itemId);
+        item.status = project.field.options.find((o) => o.id === v.optionId).name;
+        return { data: { updateProjectV2ItemFieldValue: { projectV2Item: { id: item.id } } } };
+      },
+    };
+
+    const gh = createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => { body += c; });
+      req.on('end', () => {
+        ghLog.push({ method: req.method, url: req.url, body });
+        res.setHeader('content-type', 'application/json');
+        const path = new URL(req.url, 'http://x').pathname;
+        const send = (code, obj) => { res.writeHead(code); res.end(JSON.stringify(obj)); };
+        let m;
+
+        if (path === '/graphql' && req.method === 'POST') {
+          const b = JSON.parse(body);
+          const name = (b.query.match(/(?:query|mutation)\s+(\w+)/) || [])[1];
+          const h = gqlHandlers[name];
+          if (!h) return send(200, { errors: [{ message: `fake: unhandled operation ${name}` }] });
+          return send(200, h(b.variables || {}, req.headers.authorization));
+        }
+        if (req.method === 'POST' && /\/issues$/.test(path)) {
+          const b = JSON.parse(body);
+          if (b.type === 'child') return send(422, { message: 'fake org has no issue type "child"' }); // exercises the fallback
+          const n = ++issueSeq;
+          const issue = { number: n, id: 1000 + n, node_id: `NID_${n}`, state: 'open', title: b.title, body: b.body, labels: (b.labels || []).map((x) => ({ name: x })), type: b.type ? { name: b.type } : null };
+          issues.push(issue);
+          return send(201, issue);
+        }
+        if ((m = path.match(/\/issues\/(\d+)\/sub_issues$/))) {
+          const parent = findIssue(m[1]);
+          if (!parent) return send(404, {});
+          if (req.method === 'GET') {
+            const kids = [...childParent.entries()].filter(([, p]) => p === parent.number).map(([c]) => findIssue(c)).filter(Boolean);
+            return send(200, kids);
+          }
+          const b = JSON.parse(body);
+          const child = issues.find((i) => i.id === b.sub_issue_id);
+          if (!child) return send(404, {});
+          if (childParent.has(child.number)) return send(422, { message: 'already has a parent' });
+          childParent.set(child.number, parent.number);
+          return send(201, {});
+        }
+        if ((m = path.match(/\/issues\/(\d+)$/))) {
+          const issue = findIssue(m[1]);
+          if (!issue) return send(404, {});
+          if (req.method === 'GET') return send(200, issue);
+          if (req.method === 'PATCH') {
+            const b = JSON.parse(body);
+            if (b.type === 'child') return send(422, { message: 'fake org has no issue type "child"' });
+            if (b.title !== undefined) issue.title = b.title;
+            if (b.body !== undefined) issue.body = b.body;
+            if (b.state !== undefined) issue.state = b.state;
+            if (b.labels !== undefined) issue.labels = b.labels.map((x) => ({ name: x }));
+            if (b.type !== undefined) issue.type = { name: b.type };
+            return send(200, issue);
+          }
+        }
+        send(404, { message: `fake: unhandled ${req.method} ${path}` });
+      });
+    });
+    await new Promise((r) => gh.listen(0, '127.0.0.1', r));
+    const GH = `http://127.0.0.1:${gh.address().port}`;
+    const syncEnv = {
+      GITHUB_TOKEN: 'fake-token', GITHUB_REPOSITORY: 'octo/proj',
+      GITHUB_API_URL: GH, GITHUB_GRAPHQL_URL: `${GH}/graphql`,
+      GITHUB_SERVER_URL: 'http://ghs.example', GITHUB_REF_NAME: 'main',
+      CANONWEAVE_BACKOFF_MS: '1',
+    };
+    // GitHub WRITES only: REST POST/PATCH, plus GraphQL mutations (GraphQL reads
+    // are POSTs to /graphql too — they must not count against idempotency).
+    const writes = () => ghLog.filter((l) =>
+      (l.method === 'PATCH') ||
+      (l.method === 'POST' && !l.url.endsWith('/graphql')) ||
+      (l.method === 'POST' && l.url.endsWith('/graphql') && /"query":"mutation/.test(l.body))
+    ).length;
+
+    const sy = makeRepo('cli-sync', { syncIssues: true });
+    art(sy, { id: 'root', type: 'root', body: 'R1' });
+    art(sy, { id: 'child', type: 'child', body: 'C1', ingredients: ['root'], reconciled: { root: fpBody('R1') } });
+    art(sy, { id: 'extra', type: 'extra', body: 'E1', ingredients: ['root', 'child'], reconciled: { root: fpBody('R1'), child: fpBody('C1') } });
+
+    // missing token
+    const rNoTok = await runCliAsync(['sync-issues'], sy, { ...syncEnv, GITHUB_TOKEN: '' });
+    check('sync: refuses without GITHUB_TOKEN', rNoTok.status === 2 && /TW_SYNC_TOKEN/.test(rNoTok.stderr), `status=${rNoTok.status}`);
+
+    // first sync: creates, anchors, board
+    const r1 = await runCliAsync(['sync-issues'], sy, syncEnv);
+    check('sync: first run exits 0 and creates one issue per artifact', r1.status === 0 && issues.length === 3, `status=${r1.status} issues=${issues.length}`);
+    const childFm = parseFrontmatter(readFileSync(join(sy, 'docs', 'trace', 'child.md'), 'utf8'));
+    check('sync: binding anchor provenance.issue written into frontmatter', childFm.data.provenance && typeof childFm.data.provenance.issue === 'number', JSON.stringify(childFm.data.provenance));
+    const childIssue = issues.find((i) => /\[child\]$/.test(i.title));
+    check('sync: issue body carries the marker, file link, and managed-by notice',
+      childIssue && childIssue.body.includes('<!-- canonweave-sync:child -->') && childIssue.body.includes('http://ghs.example/octo/proj/blob/main/docs/trace/child.md') && /one-way projection/.test(childIssue.body), '');
+    check('sync: native issue type set where the org defines it, label fallback where not',
+      issues.find((i) => /\[root\]$/.test(i.title)).type?.name === 'root' && childIssue.type == null && childIssue.labels.some((l) => l.name === 'canonweave:type:child'),
+      JSON.stringify(childIssue && childIssue.labels));
+    check('sync: type-fallback note printed', /native issue types unavailable for: child/.test(r1.stdout), '');
+    check('sync: board created with status field, all items fresh',
+      project.created && project.field && project.field.name === 'canonweave-status' && project.items.length === 3 && project.items.every((i) => i.status === 'fresh'),
+      JSON.stringify(project.items));
+    // sub-issues: sorted order child,extra,root -> child claims root; extra claims child, root goes body-only
+    check('sync: derivation edges as sub-issues with deterministic single-parent rule',
+      childParent.get(issues.find((i) => /\[root\]$/.test(i.title)).number) === childIssue.number &&
+      childParent.get(childIssue.number) === issues.find((i) => /\[extra\]$/.test(i.title)).number &&
+      /sub-issues \+2 \(1 body-only\)/.test(r1.stdout), r1.stdout.split('\n').filter((l) => /sub-issues/.test(l)).join(''));
+
+    // idempotent re-run: ZERO GitHub writes
+    ghLog = [];
+    const r2 = await runCliAsync(['sync-issues'], sy, syncEnv);
+    const writeEntries = () => ghLog.filter((l) =>
+      (l.method === 'PATCH') ||
+      (l.method === 'POST' && !l.url.endsWith('/graphql')) ||
+      (l.method === 'POST' && l.url.endsWith('/graphql') && /"query":"mutation/.test(l.body))
+    );
+    check('sync: idempotent re-run performs zero GitHub writes', r2.status === 0 && writes() === 0 && /unchanged 3/.test(r2.stdout),
+      `writes=${writes()} ${JSON.stringify(writeEntries().map((w) => ({ m: w.method, u: w.url, b: (w.body || '').slice(0, 120) })))}`);
+
+    // one-way: issue edits are overwritten, files untouched
+    childIssue.body = 'HUMAN EDIT that must not survive';
+    childIssue.labels.push({ name: 'keepme' });
+    const fileBefore = readFileSync(join(sy, 'docs', 'trace', 'child.md'), 'utf8');
+    const r3 = await runCliAsync(['sync-issues'], sy, syncEnv);
+    check('sync: issue edits never mutate files; next sync restores the projection',
+      r3.status === 0 && /one-way projection/.test(findIssue(childIssue.number).body) && readFileSync(join(sy, 'docs', 'trace', 'child.md'), 'utf8') === fileBefore, '');
+    check('sync: human-added labels survive the managed-label merge',
+      findIssue(childIssue.number).labels.some((l) => l.name === 'keepme'), JSON.stringify(findIssue(childIssue.number).labels));
+
+    // issue deletion -> projection restored, anchor rebound, artifact untouched
+    const oldNumber = childIssue.number;
+    issues = issues.filter((i) => i.number !== oldNumber);
+    const r4 = await runCliAsync(['sync-issues'], sy, syncEnv);
+    const reFm = parseFrontmatter(readFileSync(join(sy, 'docs', 'trace', 'child.md'), 'utf8'));
+    const reIssue = issues.find((i) => /\[child\]$/.test(i.title));
+    check('sync: deleted issue is re-created on the next run (files untouched)',
+      r4.status === 0 && reIssue && reIssue.number !== oldNumber && /rebound/.test(r4.stdout), `status=${r4.status} new=#${reIssue && reIssue.number}`);
+    check('sync: anchor re-bound to the new issue number', reFm.data.provenance.issue === (reIssue && reIssue.number), `anchor=${reFm.data.provenance.issue}`);
+
+    // drift: upstream body changes -> child suspect -> label + board status converge
+    art(sy, { id: 'root', type: 'root', body: 'R2', extra: { provenance: { issue: issues.find((i) => /\[root\]$/.test(i.title)).number } } });
+    const r5 = await runCliAsync(['sync-issues'], sy, syncEnv);
+    const childAfter = issues.find((i) => /\[child\]$/.test(i.title));
+    const childItem = project.items.find((i) => i.issueNumber === childAfter.number);
+    check('sync: suspect drift converges labels and board status',
+      r5.status === 0 && childAfter.labels.some((l) => l.name === 'status:suspect') && childItem.status === 'suspect',
+      `labels=${JSON.stringify(childAfter.labels.map((l) => l.name))} board=${childItem && childItem.status}`);
+
+    // Projects phase degrades gracefully without a project-scoped token
+    ghLog = [];
+    const r6 = await runCliAsync(['sync-issues'], sy, { ...syncEnv, CANONWEAVE_PROJECTS_TOKEN: 'no-projects-token' });
+    check('sync: board phase skips cleanly without Projects v2 access (issues still sync)',
+      r6.status === 0 && /board skipped: no Projects v2 access/.test(r6.stdout), r6.stdout.split('\n').filter((l) => /board/.test(l)).join(''));
+
+    gh.close();
   }
 
   // ---- verdict ---------------------------------------------------------------
