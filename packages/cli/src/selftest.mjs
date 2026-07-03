@@ -694,7 +694,9 @@ export async function runSelftest() {
         if (path === '/graphql' && req.method === 'POST') {
           const b = JSON.parse(body);
           const name = (b.query.match(/(?:query|mutation)\s+(\w+)/) || [])[1];
-          const h = gqlHandlers[name];
+          // own-property guard: a request-derived name must never dispatch into
+          // Object.prototype (constructor/toString/...) — CodeQL js/unvalidated-dynamic-method-call
+          const h = name && Object.hasOwn(gqlHandlers, name) ? gqlHandlers[name] : null;
           if (!h) return send(200, { errors: [{ message: `fake: unhandled operation ${name}` }] });
           return send(200, h(b.variables || {}, req.headers.authorization));
         }
