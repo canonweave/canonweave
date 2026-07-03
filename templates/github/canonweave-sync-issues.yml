@@ -39,7 +39,10 @@ jobs:
         with:
           node-version: 22
       - name: sync
-        run: npx --yes canonweave@^0.1 sync-issues
+        # exact-pin the version (docs/security.md posture) and bump deliberately.
+        # NOTE the 0.x caret trap: ^0.1 pins the 0.1 MINOR and would silently run
+        # an older release forever.
+        run: npx --yes canonweave@0.2.0 sync-issues
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Projects v2 board (optional — see the header note):
