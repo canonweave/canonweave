@@ -1,11 +1,11 @@
-// Traceweave reconcile action — the AI plane (design section 7).
+// Canonweave reconcile action — the AI plane (design section 7).
 // Zero runtime dependencies: engine via relative import, git via the runner's
 // git binary, GitHub via global fetch against GITHUB_API_URL.
 //
 // Per run: build the graph; for every suspect DOWNSTREAM artifact draft the
 // corrected content (repo-configured drafter backend) and open/refresh ONE
 // idempotent reconcile PR:
-//   - branch traceweave/reconcile/<downstream-id>--<fp8> (fp8 = first 8 hex
+//   - branch canonweave/reconcile/<downstream-id>--<fp8> (fp8 = first 8 hex
 //     of the NEW primary-upstream fingerprint) — the idempotency key: a
 //     re-run force-pushes the same branch and PATCHes the same PR, never
 //     duplicates; a further upstream change (new fp8) opens the successor
@@ -76,8 +76,8 @@ function ghClient() {
   };
 }
 
-const BRANCH_PREFIX = 'traceweave/reconcile/';
-const RECONCILE_LABEL = 'traceweave:reconcile';
+const BRANCH_PREFIX = 'canonweave/reconcile/';
+const RECONCILE_LABEL = 'canonweave:reconcile';
 
 function branchNameFor(id, newFp) { return `${BRANCH_PREFIX}${id}--${fp8(newFp)}`; }
 
@@ -85,8 +85,8 @@ function prBody({ id, draftResult, backendLine, proposalExcerpt }) {
   const s = draftResult.suspects.map((sp) =>
     `| \`${sp.ingredient}\` | \`${fp8(sp.expected)}\` | \`${fp8(sp.actual)}\` |`).join('\n');
   return [
-    `<!-- traceweave-reconcile:${id} -->`,
-    `## Traceweave reconcile: \`${id}\``,
+    `<!-- canonweave-reconcile:${id} -->`,
+    `## Canonweave reconcile: \`${id}\``,
     ``,
     `An upstream ingredient changed; this PR re-derives \`${id}\` and updates its`,
     `\`reconciled\` fingerprints. **Merging this PR is the review** — the suspect`,
@@ -117,12 +117,12 @@ async function main() {
   const gh = ghClient();
 
   if (!gh.token) {
-    annotateError('traceweave-reconcile needs GITHUB_TOKEN (contents:write + pull-requests:write) — reconcile PRs cannot be opened without it.');
+    annotateError('canonweave-reconcile needs GITHUB_TOKEN (contents:write + pull-requests:write) — reconcile PRs cannot be opened without it.');
     process.exitCode = 2;
     return;
   }
   if (!gh.repo) {
-    annotateError('traceweave-reconcile: GITHUB_REPOSITORY is not set.');
+    annotateError('canonweave-reconcile: GITHUB_REPOSITORY is not set.');
     process.exitCode = 2;
     return;
   }
@@ -131,7 +131,7 @@ async function main() {
   const inputConfig = (process.env.INPUT_CONFIG || '').trim();
   const configPath = inputConfig ? resolve(workspace, inputConfig) : findConfigPath(workspace);
   if (!configPath) {
-    annotateError(`no ${CONFIG_FILENAME} found in the workspace — is this repo initialized for traceweave?`);
+    annotateError(`no ${CONFIG_FILENAME} found in the workspace — is this repo initialized for canonweave?`);
     process.exitCode = 2;
     return;
   }
@@ -163,11 +163,11 @@ async function main() {
   setOutput('downstreams', byDownstream.size);
 
   if (byDownstream.size === 0) {
-    notice('traceweave reconcile: graph is clean — nothing to reconcile.');
+    notice('canonweave reconcile: graph is clean — nothing to reconcile.');
     setOutput('prs-created', 0); setOutput('prs-updated', 0);
     setOutput('prs-closed', 0); setOutput('briefs', 0);
     setOutput('result', 'clean');
-    writeSummary(`## Traceweave reconcile: nothing to do\n\n\`${graph.nodes.length}\` nodes · \`0\` suspect links — the graph is clean.`);
+    writeSummary(`## Canonweave reconcile: nothing to do\n\n\`${graph.nodes.length}\` nodes · \`0\` suspect links — the graph is clean.`);
     return;
   }
 
@@ -198,17 +198,17 @@ async function main() {
       try { unlinkSync(proposalPath(cfg.repoRoot, id)); } catch { /* proposal content rides in the PR body */ }
 
       // Explicit adds of exactly the record files — never a tree sweep. -f
-      // because consumers may gitignore .traceweave/ wholesale: naming an
+      // because consumers may gitignore .canonweave/ wholesale: naming an
       // ignored path (even inside an :(exclude) pathspec) makes git add die
       // with the ignored-paths advice error (caught live by the dogfood repo,
-      // whose .gitignore covers .traceweave/proposals/).
+      // whose .gitignore covers .canonweave/proposals/).
       const toAdd = [relPosix(workspace, cfg.graphPath)];
       if (artifactPath) toAdd.push(relPosix(workspace, artifactPath));
       const cacheFile = join(ctx.cacheDir, `${id}.content`);
       if (existsSync(cacheFile)) toAdd.push(relPosix(workspace, cacheFile));
       git(workspace, 'add', '-f', '--', ...toAdd);
       git(workspace, 'commit', '-m',
-        `traceweave reconcile: ${id} <- ${d.upstream.id} (${fp8(d.upstream.to)})\n\n` +
+        `canonweave reconcile: ${id} <- ${d.upstream.id} (${fp8(d.upstream.to)})\n\n` +
         `Upstream ${d.upstream.id} moved ${fp8(d.upstream.from)} -> ${fp8(d.upstream.to)}; ` +
         `re-derived ${id} with the ${d.backend} drafter and cleared its reconciled fingerprints. ` +
         `Merging this commit IS the review.`);
@@ -224,7 +224,7 @@ async function main() {
         ? d.content.slice(0, 20000) + '\n\n[proposal truncated in the PR body — the full content is this PR\'s diff]'
         : (d.content || '');
       const body = prBody({ id, draftResult: d, backendLine, proposalExcerpt: excerpt });
-      const title = `traceweave reconcile: ${id} (upstream ${d.upstream.id} changed)`;
+      const title = `canonweave reconcile: ${id} (upstream ${d.upstream.id} changed)`;
 
       let prNumber;
       if (existing) {
@@ -277,7 +277,7 @@ async function main() {
   setOutput('result', failures > 0 ? 'partial' : 'ok');
 
   writeSummary([
-    `## Traceweave reconcile: ${byDownstream.size} suspect downstream(s)`,
+    `## Canonweave reconcile: ${byDownstream.size} suspect downstream(s)`,
     ``,
     `\`${graph.suspects.length}\` suspect link(s) · \`${created}\` PR(s) created · \`${updated}\` updated · \`${closed}\` superseded/closed · \`${briefs}\` brief(s)${failures ? ` · \`${failures}\` FAILED` : ''}`,
     ``,
@@ -293,13 +293,13 @@ async function main() {
 
 main().catch((e) => {
   if (e instanceof ConfigError) {
-    annotateError(`traceweave-reconcile config error: ${e.message}`);
+    annotateError(`canonweave-reconcile config error: ${e.message}`);
     process.exitCode = 2;
   } else if (e instanceof ResolveError) {
-    annotateError(`traceweave-reconcile resolve error: ${e.message}`);
+    annotateError(`canonweave-reconcile resolve error: ${e.message}`);
     process.exitCode = 3;
   } else {
-    annotateError(`traceweave-reconcile: ${e.stack || e.message}`);
+    annotateError(`canonweave-reconcile: ${e.stack || e.message}`);
     process.exitCode = 2;
   }
 });

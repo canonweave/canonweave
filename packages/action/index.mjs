@@ -1,4 +1,4 @@
-// Traceweave gate action — the enforcement plane (design section 6).
+// Canonweave gate action — the enforcement plane (design section 6).
 // Zero runtime dependencies: engine via relative import, GitHub surfaces via
 // workflow commands + GITHUB_STEP_SUMMARY + global fetch against GITHUB_API_URL.
 //
@@ -23,7 +23,7 @@ import {
   loadOntology, loadArtifacts, buildGraph, gateVerdict, loadResolverPlugins,
 } from '../engine/src/index.mjs';
 
-const MARKER = '<!-- traceweave-gate -->';
+const MARKER = '<!-- canonweave-gate -->';
 
 // ---- workflow-command escaping (GitHub Actions toolkit rules) --------------
 function escData(s) { return String(s).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A'); }
@@ -75,7 +75,7 @@ function reconciledLine(path, ingredient) {
 // ---- report rendering -------------------------------------------------------
 function summaryMarkdown({ graph, verdict, byId, workspace }) {
   const L = [];
-  L.push(`## Traceweave gate: ${verdict.pass ? '✅ PASS' : '❌ FAIL'} — profile \`${verdict.profile}\``);
+  L.push(`## Canonweave gate: ${verdict.pass ? '✅ PASS' : '❌ FAIL'} — profile \`${verdict.profile}\``);
   L.push('');
   L.push(`\`${graph.nodes.length}\` nodes · \`${graph.edges.length}\` edges · \`${graph.suspects.length}\` suspect link(s) · \`${verdict.gaps.length}\` gap(s)`);
   L.push('');
@@ -87,7 +87,7 @@ function summaryMarkdown({ graph, verdict, byId, workspace }) {
     for (const s of graph.suspects) {
       const rec = byId && byId[s.node];
       const file = rec ? relPosix(workspace, rec.path) : '';
-      L.push(`| \`${s.node}\`${file ? ` ([file](${file}))` : ''} | \`${s.ingredient}\` | \`${fp8(s.expected)}\` | \`${fp8(s.actual)}\` | \`traceweave reconcile ${s.node}\` |`);
+      L.push(`| \`${s.node}\`${file ? ` ([file](${file}))` : ''} | \`${s.ingredient}\` | \`${fp8(s.expected)}\` | \`${fp8(s.actual)}\` | \`canonweave reconcile ${s.node}\` |`);
     }
     L.push('');
   }
@@ -144,7 +144,7 @@ async function stickyComment(md) {
   const headers = {
     authorization: `Bearer ${token}`,
     accept: 'application/vnd.github+json',
-    'user-agent': 'traceweave-action',
+    'user-agent': 'canonweave-action',
     'content-type': 'application/json',
   };
   const body = `${MARKER}\n${md}`;
@@ -182,7 +182,7 @@ async function main() {
   const configPath = inputConfig ? resolve(workspace, inputConfig) : findConfigPath(workspace);
   if (!configPath) {
     throw new ConfigError('TW_CONFIG_NOT_FOUND',
-      `no ${CONFIG_FILENAME} found in ${workspace} — run "traceweave init" or set the "config" input`);
+      `no ${CONFIG_FILENAME} found in ${workspace} — run "canonweave init" or set the "config" input`);
   }
   const cfg = loadConfig(configPath);
   const onto = loadOntology(cfg.ontologyPath);
@@ -198,10 +198,10 @@ async function main() {
     const file = rec ? relPosix(workspace, rec.path) : null;
     annotate({
       file, line: rec ? reconciledLine(rec.path, s.ingredient) : 1,
-      title: 'Traceweave: suspect ingredient link',
+      title: 'Canonweave: suspect ingredient link',
       message: `${s.node} <- ${s.ingredient}: upstream changed since last reconcile ` +
         `(reconciled ${fp8(s.expected)}, current ${fp8(s.actual)}). ` +
-        `Fix: traceweave reconcile ${s.node} (then --apply), or traceweave clear ${s.node} ${s.ingredient} if reviewed.`,
+        `Fix: canonweave reconcile ${s.node} (then --apply), or canonweave clear ${s.node} ${s.ingredient} if reviewed.`,
     });
   }
   // Annotations: gaps of the ACTIVE profile.
@@ -210,7 +210,7 @@ async function main() {
     annotate({
       file: rec ? relPosix(workspace, rec.path) : null,
       line: rec ? 1 : null,
-      title: 'Traceweave: coverage gap',
+      title: 'Canonweave: coverage gap',
       message: `${g.type}${g.id ? ` (${g.id})` : ''}: ${g.reason}`,
     });
   }
@@ -229,7 +229,7 @@ async function main() {
   setOutput('gaps', String(verdict.gaps.length));
   setOutput('profile', verdict.profile);
 
-  console.log(`Traceweave gate ${verdict.profile}: ${verdict.pass && exitCode === 0 ? 'PASS' : 'FAIL'} ` +
+  console.log(`Canonweave gate ${verdict.profile}: ${verdict.pass && exitCode === 0 ? 'PASS' : 'FAIL'} ` +
     `(${graph.suspects.length} suspect(s), ${verdict.gaps.length} gap(s), ${unresolved.length} unresolved)`);
   process.exitCode = exitCode;
 }
@@ -237,8 +237,8 @@ async function main() {
 main().catch((e) => {
   const code = e && e.exitCode ? e.exitCode : 2;
   const label = e.code && String(e.code).startsWith('TW_') ? `${e.code}: ${e.message}` : (e.message || String(e));
-  annotate({ title: `Traceweave: ${code === 3 ? 'resolve error' : 'configuration error'}`, message: label });
-  writeSummary(`## Traceweave gate: ⚠️ ${code === 3 ? 'RESOLVE ERROR (exit 3)' : 'CONFIG ERROR (exit 2)'}\n\n\`\`\`\n${label}\n\`\`\`\n\nSetup guidance: docs/quickstart.md and docs/file-format.md in the traceweave repo.`);
+  annotate({ title: `Canonweave: ${code === 3 ? 'resolve error' : 'configuration error'}`, message: label });
+  writeSummary(`## Canonweave gate: ⚠️ ${code === 3 ? 'RESOLVE ERROR (exit 3)' : 'CONFIG ERROR (exit 2)'}\n\n\`\`\`\n${label}\n\`\`\`\n\nSetup guidance: docs/quickstart.md and docs/file-format.md in the canonweave repo.`);
   setOutput('result', 'fail');
   setOutput('exit-code', String(code));
   process.exitCode = code;

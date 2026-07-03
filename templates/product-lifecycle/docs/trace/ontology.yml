@@ -1,4 +1,4 @@
-# Traceweave ontology — product-lifecycle template.
+# Canonweave ontology — product-lifecycle template.
 # Ported 1:1 from the prototype ontology.json (Exportdesk Artifact Recipe
 # Builder): 21 artifact types across 5 tiers. The prototype's single
 # requiredForGate set becomes the named profile "ready-to-build".

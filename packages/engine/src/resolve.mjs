@@ -5,11 +5,11 @@
 // Builtin kinds:
 //   inline  -> the markdown body of the recipe file IS the content (default).
 //   repo    -> read the file at source.path relative to the repo root.
-//   url     -> HTTP(S) GET source.url; cache to .traceweave/cache/<id>.content;
+//   url     -> HTTP(S) GET source.url; cache to .canonweave/cache/<id>.content;
 //              cache fallback when offline. Cache files are COMMITTED by design
 //              so remote-sourced builds stay deterministic and offline-safe in CI.
 // Plugin kinds:
-//   loaded from traceweave.yml `resolvers:` — each module exports
+//   loaded from canonweave.yml `resolvers:` — each module exports
 //   `resolvers = { <kind>: (node, ctx) => result | Promise<result> }`.
 //   Internal-only kinds (e.g. Feishu) live in private adapter packages, not here.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -34,7 +34,7 @@ export function writeCache(cacheDir, id, content) {
 
 const BUILTIN_KINDS = ['inline', 'repo', 'url'];
 
-// Load resolver plugin modules named in traceweave.yml. Returns a Map of
+// Load resolver plugin modules named in canonweave.yml. Returns a Map of
 // kind -> resolver function. Collisions with builtins or other plugins error.
 export async function loadResolverPlugins(resolverModules = []) {
   const kinds = new Map();
@@ -79,7 +79,7 @@ async function resolveUrl(node, ctx) {
     const res = await doFetch(source.url, {
       redirect: 'follow',
       signal: AbortSignal.timeout(timeoutMs),
-      headers: { 'user-agent': 'traceweave' },
+      headers: { 'user-agent': 'canonweave' },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const content = await res.text();
@@ -131,5 +131,5 @@ export async function resolveSource(node, ctx) {
 
   throw new ConfigError('TW_SOURCE_UNKNOWN_KIND',
     `node "${node.id}": unknown source.kind "${kind}" (builtins: ${BUILTIN_KINDS.join(', ')}; ` +
-    `plugin kinds come from "resolvers:" in traceweave.yml)`);
+    `plugin kinds come from "resolvers:" in canonweave.yml)`);
 }

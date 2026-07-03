@@ -19,8 +19,8 @@ import {
 import { runInit } from './init.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BIN = resolve(__dirname, '..', 'bin', 'traceweave.mjs');
-const ROOT = join(tmpdir(), 'traceweave-selftest'); // fixed, NOT random
+const BIN = resolve(__dirname, '..', 'bin', 'canonweave.mjs');
+const ROOT = join(tmpdir(), 'canonweave-selftest'); // fixed, NOT random
 
 // ---------------------------------------------------------------------------
 // fixtures
@@ -59,12 +59,12 @@ function configText({ gate = 'core', drafterBackend = 'template', resolvers = []
   return L.join('\n') + '\n';
 }
 
-// Make a fixture repo under ROOT/<name>: traceweave.yml + docs/trace/ontology.yml.
+// Make a fixture repo under ROOT/<name>: canonweave.yml + docs/trace/ontology.yml.
 function makeRepo(name, opts = {}) {
   const repo = join(ROOT, name);
   rmSync(repo, { recursive: true, force: true });
   mkdirSync(join(repo, 'docs', 'trace'), { recursive: true });
-  writeFileSync(join(repo, 'traceweave.yml'), configText(opts), 'utf8');
+  writeFileSync(join(repo, 'canonweave.yml'), configText(opts), 'utf8');
   writeFileSync(join(repo, 'docs', 'trace', 'ontology.yml'), opts.ontology || ONTOLOGY_FIXTURE, 'utf8');
   return repo;
 }
@@ -75,7 +75,7 @@ function fpBody(b) { return fingerprint(bodyText(b)); }
 // Write one artifact file (dogfoods the canonical serializer).
 function art(repo, { id, type, body = '', ingredients = [], reconciled = {}, status = 'present', source = { kind: 'inline' }, extra = {} }) {
   const data = {
-    traceweave: 1, id, type, title: `${id} fixture`,
+    canonweave: 1, id, type, title: `${id} fixture`,
     source, recipe: { ingredients, build: 'fixture build rule' },
     reconciled, owner: 'selftest', status,
     provenance: { issue: null },
@@ -89,7 +89,7 @@ function rawArt(repo, file, text) {
 }
 
 async function engine(repo, { defaultProfile } = {}) {
-  const cfg = loadConfig(join(repo, 'traceweave.yml'));
+  const cfg = loadConfig(join(repo, 'canonweave.yml'));
   const onto = loadOntology(cfg.ontologyPath);
   const plugins = await loadResolverPlugins(cfg.resolverModules);
   const ctx = { repoRoot: cfg.repoRoot, cacheDir: cfg.cacheDir, plugins, defaultProfile: defaultProfile || cfg.gateProfile };
@@ -144,11 +144,11 @@ export async function runSelftest() {
     const cases = [
       ['TW_SCHEMA_NO_FRONTMATTER', 'no frontmatter', 'x.md', '# just markdown\n'],
       ['TW_SCHEMA_MISSING_VERSION', 'missing version key', 'a.md', '---\nid: a\ntype: root\n---\nbody\n'],
-      ['TW_SCHEMA_UNSUPPORTED_VERSION', 'unsupported version', 'b.md', '---\ntraceweave: 99\nid: b\ntype: root\n---\nbody\n'],
-      ['TW_SCHEMA_MISSING_ID', 'missing id', 'c.md', '---\ntraceweave: 1\ntype: root\n---\nbody\n'],
-      ['TW_SCHEMA_BAD_ID', 'bad id (uppercase)', 'd.md', '---\ntraceweave: 1\nid: BadId\ntype: root\n---\nbody\n'],
-      ['TW_SCHEMA_BAD_STATUS', 'bad status', 'e.md', '---\ntraceweave: 1\nid: e\ntype: root\nstatus: wip\n---\nbody\n'],
-      ['TW_SCHEMA_BAD_PROVENANCE', 'non-integer provenance.issue', 'f.md', '---\ntraceweave: 1\nid: f\ntype: root\nprovenance:\n  issue: soon\n---\nbody\n'],
+      ['TW_SCHEMA_UNSUPPORTED_VERSION', 'unsupported version', 'b.md', '---\ncanonweave: 99\nid: b\ntype: root\n---\nbody\n'],
+      ['TW_SCHEMA_MISSING_ID', 'missing id', 'c.md', '---\ncanonweave: 1\ntype: root\n---\nbody\n'],
+      ['TW_SCHEMA_BAD_ID', 'bad id (uppercase)', 'd.md', '---\ncanonweave: 1\nid: BadId\ntype: root\n---\nbody\n'],
+      ['TW_SCHEMA_BAD_STATUS', 'bad status', 'e.md', '---\ncanonweave: 1\nid: e\ntype: root\nstatus: wip\n---\nbody\n'],
+      ['TW_SCHEMA_BAD_PROVENANCE', 'non-integer provenance.issue', 'f.md', '---\ncanonweave: 1\nid: f\ntype: root\nprovenance:\n  issue: soon\n---\nbody\n'],
     ];
     for (const [code, label, file, text] of cases) {
       rmSync(join(repo, 'docs', 'trace'), { recursive: true, force: true });
@@ -188,7 +188,7 @@ export async function runSelftest() {
     check('edges: illegal ingredient edge rejected', r1.ok, r1.detail);
 
     const repo2 = makeRepo('edges-unknown-type');
-    rawArt(repo2, 'z.md', '---\ntraceweave: 1\nid: z\ntype: mystery\n---\nbody\n');
+    rawArt(repo2, 'z.md', '---\ncanonweave: 1\nid: z\ntype: mystery\n---\nbody\n');
     const r2 = await expectCode(async () => { await buildRepo(repo2); }, 'TW_TYPE_UNKNOWN');
     check('edges: unknown artifact type rejected', r2.ok, r2.detail);
 
@@ -202,18 +202,18 @@ export async function runSelftest() {
   {
     const repo = makeRepo('multiroot');
     mkdirSync(join(repo, 'docs', 'trace2'), { recursive: true });
-    writeFileSync(join(repo, 'traceweave.yml'),
+    writeFileSync(join(repo, 'canonweave.yml'),
       'roots: [docs/trace, docs/trace2]\nontology: docs/trace/ontology.yml\ngraph: docs/trace/graph.json\ngate: core\ndrafter:\n  backend: template\n', 'utf8');
     art(repo, { id: 'root', type: 'root', body: 'R1' });
     writeFileSync(join(repo, 'docs', 'trace2', 'child.md'),
-      serializeFrontmatter({ traceweave: 1, id: 'child', type: 'child', source: { kind: 'inline' }, recipe: { ingredients: ['root'] }, reconciled: { root: fpBody('R1') }, status: 'present' }, bodyText('C1')), 'utf8');
+      serializeFrontmatter({ canonweave: 1, id: 'child', type: 'child', source: { kind: 'inline' }, recipe: { ingredients: ['root'] }, reconciled: { root: fpBody('R1') }, status: 'present' }, bodyText('C1')), 'utf8');
     const { graph } = await buildRepo(repo);
     check('multi-root: artifacts from two roots merge into one graph',
       graph.nodes.length === 2 && graph.edges.length === 1 && graph.suspects.length === 0,
       `nodes=${graph.nodes.length} edges=${graph.edges.length} suspects=${graph.suspects.length}`);
 
     writeFileSync(join(repo, 'docs', 'trace2', 'root-dupe.md'),
-      serializeFrontmatter({ traceweave: 1, id: 'root', type: 'root', source: { kind: 'inline' }, recipe: { ingredients: [] }, status: 'present' }, bodyText('R-DUPE')), 'utf8');
+      serializeFrontmatter({ canonweave: 1, id: 'root', type: 'root', source: { kind: 'inline' }, recipe: { ingredients: [] }, status: 'present' }, bodyText('R-DUPE')), 'utf8');
     const r = await expectCode(async () => { await buildRepo(repo); }, 'TW_DUPLICATE_ID');
     check('multi-root: duplicate artifact id across roots rejected', r.ok, r.detail);
   }
@@ -231,7 +231,7 @@ export async function runSelftest() {
   // ---- 6. serializer round-trips (rewrite safety) ---------------------------
   {
     const data = {
-      traceweave: 1, id: 'rt', type: 'root', title: 'has: colon, and, commas',
+      canonweave: 1, id: 'rt', type: 'root', title: 'has: colon, and, commas',
       source: { kind: 'inline' },
       recipe: { ingredients: [], build: 'a build: with colon' },
       reconciled: { dep: 'sha256:abc' },
@@ -319,8 +319,8 @@ export async function runSelftest() {
     check('url: live fetch resolves and fingerprints the remote content',
       rootNode().source.resolver === 'url' && rootNode().fingerprint === fingerprint('REMOTE-CONTENT-v1') && g.suspects.length === 0,
       `resolver=${rootNode().source.resolver}`);
-    const cacheFile = join(repo, '.traceweave', 'cache', 'root.content');
-    check('url: fetched content cached to .traceweave/cache/<id>.content',
+    const cacheFile = join(repo, '.canonweave', 'cache', 'root.content');
+    check('url: fetched content cached to .canonweave/cache/<id>.content',
       existsSync(cacheFile) && readFileSync(cacheFile, 'utf8') === 'REMOTE-CONTENT-v1');
 
     await new Promise((res) => server.close(res));
@@ -329,7 +329,7 @@ export async function runSelftest() {
       rootNode().source.resolver === 'url:cache' && rootNode().fingerprint === fingerprint('REMOTE-CONTENT-v1') && !rootNode().unresolved,
       `resolver=${rootNode().source.resolver}`);
 
-    rmSync(join(repo, '.traceweave'), { recursive: true, force: true });
+    rmSync(join(repo, '.canonweave'), { recursive: true, force: true });
     g = (await buildRepo(repo)).graph;
     check('url: offline with no cache -> node unresolved', rootNode().unresolved === true);
     let threw = null;
@@ -362,7 +362,7 @@ export async function runSelftest() {
     art(repo2, { id: 'root', type: 'root', body: '', source: { kind: 'fixture' } });
     const { graph: g2 } = await buildRepo(repo2);
     const n = g2.nodes.find((x) => x.id === 'root');
-    check('resolvers: plugin kind from traceweave.yml resolves content',
+    check('resolvers: plugin kind from canonweave.yml resolves content',
       n.source.resolver === 'fixture' && n.fingerprint === fingerprint('FIXTURE:root') && !n.unresolved,
       `resolver=${n.source.resolver}`);
 
@@ -513,27 +513,27 @@ export async function runSelftest() {
   // ---- 14. config validation --------------------------------------------------
   {
     const repo = makeRepo('config-bad');
-    writeFileSync(join(repo, 'traceweave.yml'), 'roots: [docs/trace]\nsurprise: 1\n', 'utf8');
-    const r1 = await expectCode(() => loadConfig(join(repo, 'traceweave.yml')), 'TW_CONFIG_UNKNOWN_KEY');
+    writeFileSync(join(repo, 'canonweave.yml'), 'roots: [docs/trace]\nsurprise: 1\n', 'utf8');
+    const r1 = await expectCode(() => loadConfig(join(repo, 'canonweave.yml')), 'TW_CONFIG_UNKNOWN_KEY');
     check('config: unknown top-level key rejected', r1.ok, r1.detail);
 
-    writeFileSync(join(repo, 'traceweave.yml'), 'drafter:\n  backend: anthropic\n', 'utf8');
-    const cfgA = loadConfig(join(repo, 'traceweave.yml'));
+    writeFileSync(join(repo, 'canonweave.yml'), 'drafter:\n  backend: anthropic\n', 'utf8');
+    const cfgA = loadConfig(join(repo, 'canonweave.yml'));
     check('config: anthropic backend accepted with safe defaults (WS3 shipped)',
       cfgA.drafter.backend === 'anthropic' && cfgA.drafter.apiKeyEnv === 'ANTHROPIC_API_KEY'
       && cfgA.drafter.baseUrl === 'https://api.anthropic.com' && cfgA.drafter.maxTokens === 8192
       && typeof cfgA.drafter.model === 'string' && cfgA.drafter.model.length > 0);
 
-    writeFileSync(join(repo, 'traceweave.yml'), 'drafter:\n  backend: openai\n', 'utf8');
-    const r2 = await expectCode(() => loadConfig(join(repo, 'traceweave.yml')), 'TW_CONFIG_DRAFTER_MODEL');
+    writeFileSync(join(repo, 'canonweave.yml'), 'drafter:\n  backend: openai\n', 'utf8');
+    const r2 = await expectCode(() => loadConfig(join(repo, 'canonweave.yml')), 'TW_CONFIG_DRAFTER_MODEL');
     check('config: openai backend without model rejected (TW_CONFIG_DRAFTER_MODEL)', r2.ok, r2.detail);
 
-    writeFileSync(join(repo, 'traceweave.yml'), 'drafter:\n  backend: anthropic\n  api_key_env: "lower case"\n', 'utf8');
-    const r2b = await expectCode(() => loadConfig(join(repo, 'traceweave.yml')), 'TW_CONFIG_DRAFTER');
+    writeFileSync(join(repo, 'canonweave.yml'), 'drafter:\n  backend: anthropic\n  api_key_env: "lower case"\n', 'utf8');
+    const r2b = await expectCode(() => loadConfig(join(repo, 'canonweave.yml')), 'TW_CONFIG_DRAFTER');
     check('config: api_key_env must be an environment variable NAME, never a key', r2b.ok, r2b.detail);
 
-    const r3 = await expectCode(() => loadConfig(join(repo, 'nope', 'traceweave.yml')), 'TW_CONFIG_NOT_FOUND');
-    check('config: missing traceweave.yml is TW_CONFIG_NOT_FOUND', r3.ok, r3.detail);
+    const r3 = await expectCode(() => loadConfig(join(repo, 'nope', 'canonweave.yml')), 'TW_CONFIG_NOT_FOUND');
+    check('config: missing canonweave.yml is TW_CONFIG_NOT_FOUND', r3.ok, r3.detail);
   }
 
   // ---- 15. init smoke: generic-software (green) + product-lifecycle (honest fail)
@@ -608,7 +608,7 @@ export async function runSelftest() {
     // exit 2: config error
     const bad = join(ROOT, 'cli-badconfig');
     mkdirSync(bad, { recursive: true });
-    writeFileSync(join(bad, 'traceweave.yml'), 'surprise: 1\n', 'utf8');
+    writeFileSync(join(bad, 'canonweave.yml'), 'surprise: 1\n', 'utf8');
     const r2 = runCli(['build'], bad);
     check('CLI exit 2: config error', r2.status === 2 && /TW_CONFIG_UNKNOWN_KEY/.test(r2.stderr), `status=${r2.status}`);
     const rVerb = runCli(['no-such-verb'], gs);

@@ -1,8 +1,8 @@
-# Traceweave
+# Canonweave
 
 **GitHub-native artifact traceability.** Every product artifact — brief,
 requirements, acceptance criteria, architecture, test plan — is a Markdown
-file that declares what it derives from. Traceweave builds the derivation
+file that declares what it derives from. Canonweave builds the derivation
 graph, fingerprints every link, flags stale dependents the moment an upstream
 changes, and gates CI until a human reconciles the thread.
 
@@ -18,8 +18,8 @@ changes, and gates CI until a human reconciles the thread.
 ## Try it
 
 ```bash
-node packages/cli/bin/traceweave.mjs init --template generic-software --dir /tmp/demo
-cd /tmp/demo && node <this-repo>/packages/cli/bin/traceweave.mjs check
+node packages/cli/bin/canonweave.mjs init --template generic-software --dir /tmp/demo
+cd /tmp/demo && node <this-repo>/packages/cli/bin/canonweave.mjs check
 ```
 
 Full walkthrough: [docs/quickstart.md](docs/quickstart.md)
@@ -29,7 +29,7 @@ Full walkthrough: [docs/quickstart.md](docs/quickstart.md)
 | path | what |
 |---|---|
 | `packages/engine` | zero-dep core: config, schema, ontology, resolvers, fingerprints, graph, gates, reconcile |
-| `packages/cli` | the `traceweave` binary: init/build/check/gate/fingerprint/clear/reconcile/selftest |
+| `packages/cli` | the `canonweave` binary: init/build/check/gate/fingerprint/clear/reconcile/selftest |
 | `packages/reconcile-action` | the reconcile GitHub Action: idempotent AI fix PRs for suspect links (docs/reconcile.md) |
 | `packages/action` | the gate as a GitHub Action: inline annotations, sticky PR comment, job summary, fork-safe ([usage](packages/action/README.md)) |
 | `templates/` | `generic-software`, `product-lifecycle` ontology templates |

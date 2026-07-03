@@ -1,6 +1,6 @@
 node_modules/
 .DS_Store
 *.log
-# NOTE: .traceweave/cache/ directories in consumer repos are COMMITTED by design
+# NOTE: .canonweave/cache/ directories in consumer repos are COMMITTED by design
 # (deterministic offline builds). This repo's own examples commit their caches too.
 dist-npm/

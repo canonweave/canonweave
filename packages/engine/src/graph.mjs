@@ -174,7 +174,7 @@ export async function buildGraph(onto, byId, ctx) {
   }
 
   return {
-    traceweave: GRAPH_FORMAT_VERSION,
+    canonweave: GRAPH_FORMAT_VERSION,
     generatedAt: null,          // determinism invariant: no clocks in the graph
     defaultProfile,
     nodes,

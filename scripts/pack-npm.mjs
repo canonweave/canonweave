@@ -1,5 +1,5 @@
 // pack-npm.mjs — assemble the publishable npm package (design §2: ONE package
-// `traceweave` = engine + CLI + templates) into dist-npm/.
+// `canonweave` = engine + CLI + templates) into dist-npm/.
 //
 // The monorepo runs on cross-package RELATIVE imports (zero npm install).
 // Publishing packages/cli alone would break them, so the pack preserves the
@@ -7,7 +7,7 @@
 // still zero runtime dependencies. The GitHub Action is deliberately NOT in
 // the npm artifact (consumed via the action ref, design §2).
 //
-// Verify locally:  node scripts/pack-npm.mjs && node dist-npm/packages/cli/bin/traceweave.mjs selftest
+// Verify locally:  node scripts/pack-npm.mjs && node dist-npm/packages/cli/bin/canonweave.mjs selftest
 import { rmSync, mkdirSync, cpSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,19 +31,19 @@ for (const f of ['README.md', 'LICENSE', 'NOTICE', 'SECURITY.md']) {
 }
 
 const pkg = {
-  name: 'traceweave',
+  name: 'canonweave',
   version: cliPkg.version,
   description: 'GitHub-native artifact traceability: files as the system of record, deterministic derivation graph, suspect links, AI reconcile behind a human PR gate. Zero runtime dependencies.',
   license: 'Apache-2.0',
   type: 'module',
-  bin: { traceweave: 'packages/cli/bin/traceweave.mjs' },
+  bin: { canonweave: 'packages/cli/bin/canonweave.mjs' },
   exports: { '.': './packages/engine/src/index.mjs' },
   files: ['packages', 'templates', 'docs', 'README.md', 'LICENSE', 'NOTICE', 'SECURITY.md'],
-  repository: { type: 'git', url: 'git+https://github.com/traceweavehq/traceweave.git' },
-  homepage: 'https://github.com/traceweavehq/traceweave#readme',
-  bugs: { url: 'https://github.com/traceweavehq/traceweave/issues' },
+  repository: { type: 'git', url: 'git+https://github.com/canonweave/canonweave.git' },
+  homepage: 'https://github.com/canonweave/canonweave#readme',
+  bugs: { url: 'https://github.com/canonweave/canonweave/issues' },
   keywords: ['traceability', 'requirements', 'alm', 'documentation', 'ci', 'github-actions', 'deterministic'],
   engines: { node: '>=20' },
 };
 writeFileSync(join(DIST, 'package.json'), JSON.stringify(pkg, null, 2) + '\n', 'utf8');
-console.log(`packed traceweave@${pkg.version} -> dist-npm/ (engine + cli + templates + docs)`);
+console.log(`packed canonweave@${pkg.version} -> dist-npm/ (engine + cli + templates + docs)`);

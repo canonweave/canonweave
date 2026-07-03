@@ -1,15 +1,15 @@
-// config.mjs — traceweave.yml loading + validation (design section 4.3).
+// config.mjs — canonweave.yml loading + validation (design section 4.3).
 //
 // The config file lives at the consumer repo root. All relative paths in it are
-// resolved against the directory containing traceweave.yml (= repoRoot).
-// The resolver cache is FIXED at <repoRoot>/.traceweave/cache and is committed
+// resolved against the directory containing canonweave.yml (= repoRoot).
+// The resolver cache is FIXED at <repoRoot>/.canonweave/cache and is committed
 // by design (deterministic, offline-safe CI builds — design section 5).
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { parseYaml, YamlError } from './yaml.mjs';
 import { ConfigError } from './errors.mjs';
 
-export const CONFIG_FILENAME = 'traceweave.yml';
+export const CONFIG_FILENAME = 'canonweave.yml';
 
 // Drafter backends. template/cmd/none shipped in WS1; anthropic/openai are
 // the WS3 (AIW-232) zero-dep API backends — design section 7. API keys are
@@ -28,7 +28,7 @@ function isSlugList(v) {
   return Array.isArray(v) && v.every((x) => typeof x === 'string' && x.trim() !== '');
 }
 
-// Walk up from startDir looking for traceweave.yml. Returns absolute path or null.
+// Walk up from startDir looking for canonweave.yml. Returns absolute path or null.
 export function findConfigPath(startDir) {
   let dir = resolve(startDir);
   for (;;) {
@@ -40,11 +40,11 @@ export function findConfigPath(startDir) {
   }
 }
 
-// Load + validate traceweave.yml. `configPath` must be the file itself.
+// Load + validate canonweave.yml. `configPath` must be the file itself.
 export function loadConfig(configPath) {
   if (!existsSync(configPath)) {
     throw new ConfigError('TW_CONFIG_NOT_FOUND',
-      `no ${CONFIG_FILENAME} found at ${configPath} — run "traceweave init" or pass --config`);
+      `no ${CONFIG_FILENAME} found at ${configPath} — run "canonweave init" or pass --config`);
   }
   let raw;
   try {
@@ -162,6 +162,6 @@ export function loadConfig(configPath) {
     sync,
     resolverModules: resolversRel.map(abs),
     resolverModulesRel: resolversRel,
-    cacheDir: join(repoRoot, '.traceweave', 'cache'),
+    cacheDir: join(repoRoot, '.canonweave', 'cache'),
   };
 }

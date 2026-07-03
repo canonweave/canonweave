@@ -1,7 +1,7 @@
 # Changelog
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
-follow semver; the frontmatter schema (`traceweave: 1`), ontology version,
+follow semver; the frontmatter schema (`canonweave: 1`), ontology version,
 fingerprint normalization, exit codes, and `TW_*` error codes are versioned
 contracts — changing their meaning is a MAJOR (docs/file-format.md).
 
@@ -13,7 +13,7 @@ contracts — changing their meaning is a MAJOR (docs/file-format.md).
   injection defense (single completion, no tools, input caps, fence
   stripping, key-from-env-only); the reconcile GitHub Action
   (`packages/reconcile-action`) with idempotent PR mechanics — branch
-  `traceweave/reconcile/<id>--<fp8>`, re-runs update in place, upstream moves
+  `canonweave/reconcile/<id>--<fp8>`, re-runs update in place, upstream moves
   close the stale PR and open a linked successor, merging IS the review;
   consumer workflow template + docs/reconcile.md. Hermetic selftests: engine
   suite grows 75 -> 83 (loopback API backends), reconcile-action suite adds
@@ -26,7 +26,7 @@ contracts — changing their meaning is a MAJOR (docs/file-format.md).
 - WS1 — zero-dependency core engine (config, frontmatter schema v1, ontology
   with named gate profiles, inline/repo/url resolvers + plugin seam,
   CRLF-normalized fingerprints, deterministic graph, reconcile draft/apply)
-  and the `traceweave` CLI (init/build/check/gate/fingerprint/clear/
+  and the `canonweave` CLI (init/build/check/gate/fingerprint/clear/
   reconcile/selftest). Hermetic selftest (75 checks), determinism snapshot,
   zero-deps enforcement, 3-OS × Node 20/22/24 CI matrix.
 - WS2 — the gate GitHub Action: inline annotations on suspect artifact lines,

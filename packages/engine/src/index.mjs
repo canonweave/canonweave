@@ -1,4 +1,4 @@
-// @traceweave/engine — public API. Zero runtime dependencies (Node builtins only).
+// @canonweave/engine — public API. Zero runtime dependencies (Node builtins only).
 export { EXIT, SCHEMA_VERSION, ONTOLOGY_VERSION, FINGERPRINT_VERSION, ConfigError, ResolveError } from './errors.mjs';
 export { parseYaml, YamlError } from './yaml.mjs';
 export { fingerprint, normalize } from './fingerprint.mjs';

@@ -12,8 +12,8 @@ in `packages/` is everything that runs.
 | input | trust | defense |
 |---|---|---|
 | artifact files (frontmatter + body) | **untrusted** | schema validation (exit 2); content only ever hashed, rendered in reports, or fed to the drafter behind the human PR gate |
-| `traceweave.yml`, `ontology.yml` | repo-trusted (reviewed like code) | strict validation, unknown keys rejected |
-| resolver plugins (`resolvers:` in traceweave.yml) | **executes arbitrary code** — treat exactly like a dev dependency; review before adding; collisions with builtin kinds are rejected | |
+| `canonweave.yml`, `ontology.yml` | repo-trusted (reviewed like code) | strict validation, unknown keys rejected |
+| resolver plugins (`resolvers:` in canonweave.yml) | **executes arbitrary code** — treat exactly like a dev dependency; review before adding; collisions with builtin kinds are rejected | |
 | `url` sources | untrusted remote content | fetched with a 30s timeout; content cached and committed — the diff of the cache file IS the review surface for remote changes |
 | drafter `cmd` backend | runs a repo-configured argv | configure only trusted commands; the prompt is passed as one argument, never through a shell |
 
@@ -45,5 +45,5 @@ workflow ever sees a model key, and only as the user's own repo secret.
 
 Publishing lands with: SHA-pinned action usage guidance, npm provenance +
 SLSA attestation, signed tags, OpenSSF Scorecard, CodeQL, SECURITY.md with a
-disclosure policy, and branch protection gated by Traceweave itself (we are
+disclosure policy, and branch protection gated by Canonweave itself (we are
 user zero — the dogfood gate AIW-231 blocks any public launch).

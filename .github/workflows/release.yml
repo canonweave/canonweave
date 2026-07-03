@@ -3,7 +3,7 @@
 # tag `vX.Y.Z` (see docs/releasing.md).
 #
 # Requires the NPM_TOKEN repo secret (npm automation token with publish
-# rights on the `traceweave` package / @traceweave scope). npm --provenance
+# rights on the `canonweave` package / @canonweave scope). npm --provenance
 # generates the SLSA provenance statement, verifiable via `npm audit signatures`.
 name: release
 
@@ -54,11 +54,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag \
-            --notes-file <(printf 'Pinned action ref for this release:\n\n    uses: traceweavehq/traceweave/packages/action@%s\n' "$GITHUB_SHA")
+            --notes-file <(printf 'Pinned action ref for this release:\n\n    uses: canonweave/canonweave/packages/action@%s\n' "$GITHUB_SHA")
       - name: move action major tag (v1) on stable releases
         if: ${{ !contains(github.ref_name, '-') }}
         run: |
-          git config user.name "traceweave-release"
+          git config user.name "canonweave-release"
           git config user.email "release@users.noreply.github.com"
           git tag -f v1 "$GITHUB_SHA"
           git push -f origin v1

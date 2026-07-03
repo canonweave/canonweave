@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report vulnerabilities **privately** via GitHub Security Advisories:
-[Report a vulnerability](https://github.com/traceweavehq/traceweave/security/advisories/new).
+[Report a vulnerability](https://github.com/canonweave/canonweave/security/advisories/new).
 Do not open a public issue for a security report.
 
 You can expect an acknowledgement within **72 hours** and a fix or a concrete

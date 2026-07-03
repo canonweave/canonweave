@@ -1,6 +1,6 @@
-# @traceweave/action
+# @canonweave/action
 
-The Traceweave **gate** as a GitHub Action: build the artifact graph in memory,
+The Canonweave **gate** as a GitHub Action: build the artifact graph in memory,
 fail the check when required coverage is missing, a derivation link went
 suspect, or a source cannot resolve — with the evidence surfaced where
 reviewers look.
@@ -11,7 +11,7 @@ reviewers look.
 |---|---|---|
 | Inline annotations on the suspect artifact file (exact `reconciled:` entry line) | workflow commands -> the job's check run | yes |
 | Job summary (full report) | `GITHUB_STEP_SUMMARY` | yes |
-| ONE sticky PR comment, updated in place (marker `<!-- traceweave-gate -->`) | REST via `GITHUB_TOKEN` | no — skipped gracefully |
+| ONE sticky PR comment, updated in place (marker `<!-- canonweave-gate -->`) | REST via `GITHUB_TOKEN` | no — skipped gracefully |
 | Outputs `result` / `exit-code` / `suspects` / `gaps` / `profile` | `GITHUB_OUTPUT` | yes |
 
 Exit codes mirror the CLI contract: `0` pass · `1` gate fail · `2` config
@@ -26,17 +26,17 @@ Same-repo (dogfood) form:
 - uses: actions/checkout@v4
 - uses: ./packages/action
   with:
-    profile: ready-to-build   # optional; defaults to traceweave.yml `gate`
+    profile: ready-to-build   # optional; defaults to canonweave.yml `gate`
 ```
 
 Cross-repo form (after the WS5 publish):
 
 ```yaml
-- uses: traceweavehq/traceweave/packages/action@<pinned-sha>   # pin by SHA, not tag
+- uses: canonweave/canonweave/packages/action@<pinned-sha>   # pin by SHA, not tag
 ```
 
 Full consumer workflow (triggers, concurrency, permissions, merge-queue):
-[templates/github/traceweave-gate.yml](../../templates/github/traceweave-gate.yml).
+[templates/github/canonweave-gate.yml](../../templates/github/canonweave-gate.yml).
 Branch-protection / ruleset recipe: [docs/gate-recipes.md](../../docs/gate-recipes.md).
 
 ## Verify locally

@@ -1,18 +1,18 @@
 {
-  "name": "traceweave",
+  "name": "canonweave",
   "private": true,
   "version": "0.1.0",
-  "description": "Traceweave CLI \u2014 init, build, check, gate, fingerprint, clear, reconcile, selftest. Zero runtime dependencies.",
+  "description": "Canonweave CLI \u2014 init, build, check, gate, fingerprint, clear, reconcile, selftest. Zero runtime dependencies.",
   "type": "module",
   "bin": {
-    "traceweave": "bin/traceweave.mjs"
+    "canonweave": "bin/canonweave.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/traceweavehq/traceweave.git",
+    "url": "git+https://github.com/canonweave/canonweave.git",
     "directory": "packages/cli"
   },
   "license": "Apache-2.0"

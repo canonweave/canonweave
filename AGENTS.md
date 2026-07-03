@@ -1,4 +1,4 @@
-# AGENTS.md — working on traceweave with an AI agent
+# AGENTS.md — working on canonweave with an AI agent
 
 Facts an agent needs before touching this repo:
 
@@ -6,7 +6,7 @@ Facts an agent needs before touching this repo:
   never import anything but `node:*` builtins or relative paths under
   `packages/`. `node scripts/check-zero-deps.mjs` must stay green.
 - **Run everything with plain `node` — there is no install step.**
-  Full suite: `npm test` (= `packages/cli/bin/traceweave.mjs selftest`,
+  Full suite: `npm test` (= `packages/cli/bin/canonweave.mjs selftest`,
   `packages/action/selftest.mjs`, `scripts/determinism.mjs`,
   `scripts/check-zero-deps.mjs`). All hermetic; network is loopback-only.
 - **Determinism invariant:** building twice, or from a CRLF checkout, must

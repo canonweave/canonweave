@@ -1,5 +1,5 @@
 ---
-traceweave: 1
+canonweave: 1
 id: test-plan
 type: test-plan
 title: Test Plan

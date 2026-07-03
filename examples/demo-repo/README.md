@@ -1,4 +1,4 @@
-# Traceweave demo repo (living fixture)
+# Canonweave demo repo (living fixture)
 
 A minimal product with a full traced artifact graph, generated from the
 `generic-software` template. It serves three jobs at once:
@@ -15,8 +15,8 @@ A minimal product with a full traced artifact graph, generated from the
 
 Regenerate after intentional engine-format changes:
 
-    rm -rf examples/demo-repo && node packages/cli/bin/traceweave.mjs init --template generic-software --dir examples/demo-repo
+    rm -rf examples/demo-repo && node packages/cli/bin/canonweave.mjs init --template generic-software --dir examples/demo-repo
     (then restore this README)
 
-`docs/trace/graph.json` and any `.traceweave/cache/` content are committed on
+`docs/trace/graph.json` and any `.canonweave/cache/` content are committed on
 purpose — deterministic, diff-reviewable state (design sections 4.4, 5).

@@ -1,20 +1,20 @@
-# Traceweave reconcile workflow — copy into .github/workflows/ of any repo
-# that runs the traceweave gate (design section 7: the AI plane).
+# Canonweave reconcile workflow — copy into .github/workflows/ of any repo
+# that runs the canonweave gate (design section 7: the AI plane).
 #
 # When a push to the default branch leaves ingredient links suspect, this
 # drafts the corrected downstream artifacts and opens ONE idempotent PR per
-# suspect downstream (branch traceweave/reconcile/<id>--<fp8>). Re-runs
+# suspect downstream (branch canonweave/reconcile/<id>--<fp8>). Re-runs
 # update the open PR; a further upstream change closes the stale PR and
 # opens a linked successor. MERGING A RECONCILE PR IS THE REVIEW.
 #
-# The drafter API key comes from YOUR repo secret (never the traceweave
+# The drafter API key comes from YOUR repo secret (never the canonweave
 # project's infrastructure). With no key configured the run degrades to
 # briefs in the job summary — nothing breaks. Threat model: docs/reconcile.md.
 #
 # ONE-TIME REPO SETTING (GitHub default blocks Actions-created PRs):
 # Settings -> Actions -> General -> Workflow permissions -> check
 # "Allow GitHub Actions to create and approve pull requests".
-name: traceweave-reconcile
+name: canonweave-reconcile
 
 on:
   push:
@@ -24,7 +24,7 @@ on:
   #   - cron: '47 2 * * *'
 
 concurrency:
-  group: traceweave-reconcile
+  group: canonweave-reconcile
   cancel-in-progress: false  # runs queue; branch names make re-runs idempotent
 
 permissions:
@@ -36,12 +36,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3 — pin actions by SHA
-      # Same-repo form (the traceweave monorepo reconciling itself):
+      # Same-repo form (the canonweave monorepo reconciling itself):
       - uses: ./packages/reconcile-action
       # Cross-repo form once published (WS5) — pin by SHA, not tag:
-      # - uses: traceweavehq/traceweave/packages/reconcile-action@<pinned-sha>
+      # - uses: canonweave/canonweave/packages/reconcile-action@<pinned-sha>
         with:
-          config: ''        # empty = auto-discover traceweave.yml
+          config: ''        # empty = auto-discover canonweave.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Drafter key for the anthropic backend (repo secret; optional —

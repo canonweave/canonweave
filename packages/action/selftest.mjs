@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const INDEX = join(__dirname, 'index.mjs');
 const REPO = resolve(__dirname, '..', '..');
 const DEMO = join(REPO, 'examples', 'demo-repo');
-const ROOT = join(tmpdir(), 'traceweave-action-selftest'); // fixed, NOT random
+const ROOT = join(tmpdir(), 'canonweave-action-selftest'); // fixed, NOT random
 
 const results = [];
 const check = (name, cond, detail = '') => {
@@ -107,17 +107,17 @@ mkdirSync(ROOT, { recursive: true });
   const r = await runAction(ws);
   check('clean PR: exit 0', r.status === 0, `status=${r.status} ${r.stderr.slice(0, 120)}`);
   check('clean PR: no error annotations', !/::error/.test(r.stdout));
-  check('clean PR: job summary reports PASS', /Traceweave gate: ✅ PASS/.test(r.summary));
+  check('clean PR: job summary reports PASS', /Canonweave gate: ✅ PASS/.test(r.summary));
   check('clean PR: outputs result=pass, exit-code=0', /result=pass/.test(r.output) && /exit-code=0/.test(r.output));
   const post = apiLog.find((x) => x.method === 'POST');
   check('clean PR: sticky comment created via API (marker present)',
-    !!post && post.url === '/repos/acme/demo/issues/7/comments' && post.body.includes('traceweave-gate'),
+    !!post && post.url === '/repos/acme/demo/issues/7/comments' && post.body.includes('canonweave-gate'),
     apiLog.map((x) => `${x.method} ${x.url}`).join(' | '));
 }
 
 // 2. Suspect PR: mutate an upstream -> fail, annotation names the link, sticky comment UPDATED in place.
 {
-  apiLog = []; existingComments = [{ id: 1001, body: '<!-- traceweave-gate -->\nold report' }];
+  apiLog = []; existingComments = [{ id: 1001, body: '<!-- canonweave-gate -->\nold report' }];
   const ws = makeWorkspace('suspect');
   appendFileSync(join(ws, 'docs', 'trace', 'product-brief.md'), '\nThe outcome promise changed in this PR.\n', 'utf8');
   const r = await runAction(ws);
@@ -142,7 +142,7 @@ mkdirSync(ROOT, { recursive: true });
   const r = await runAction(ws, { token: null });
   check('fork PR: exit 1 still enforced', r.status === 1, `status=${r.status}`);
   check('fork PR: zero API calls (no token)', apiLog.length === 0, `calls=${apiLog.length}`);
-  check('fork PR: job summary still written (fork-safe surface)', /Traceweave gate: ❌ FAIL/.test(r.summary));
+  check('fork PR: job summary still written (fork-safe surface)', /Canonweave gate: ❌ FAIL/.test(r.summary));
   check('fork PR: skip reason surfaced as a notice', /::notice::sticky comment: skipped \(no GITHUB_TOKEN/.test(r.stdout));
 }
 
@@ -160,7 +160,7 @@ mkdirSync(ROOT, { recursive: true });
 {
   apiLog = []; existingComments = [];
   const ws = makeWorkspace('badcfg');
-  writeFileSync(join(ws, 'traceweave.yml'), 'surprise: 1\n', 'utf8');
+  writeFileSync(join(ws, 'canonweave.yml'), 'surprise: 1\n', 'utf8');
   const r = await runAction(ws);
   check('config error: exit 2', r.status === 2, `status=${r.status}`);
   check('config error: error annotation emitted', /::error .*configuration error/.test(r.stdout));

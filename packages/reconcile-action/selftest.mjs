@@ -16,8 +16,8 @@ import { createServer } from 'node:http';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const INDEX = join(__dirname, 'index.mjs');
-const CLI = resolve(__dirname, '..', 'cli', 'bin', 'traceweave.mjs');
-const ROOT = join(tmpdir(), 'traceweave-reconcile-selftest'); // fixed, NOT random
+const CLI = resolve(__dirname, '..', 'cli', 'bin', 'canonweave.mjs');
+const ROOT = join(tmpdir(), 'canonweave-reconcile-selftest'); // fixed, NOT random
 
 const results = [];
 const check = (name, cond, detail = '') => {
@@ -87,7 +87,7 @@ const CONFIG = [
 ].join('\n');
 
 function art(dir, { id, type, body, ingredients = [], reconciled = {} }) {
-  const L = ['---', 'traceweave: 1', `id: ${id}`, `type: ${type}`, `title: ${id}`, 'source:', '  kind: inline'];
+  const L = ['---', 'canonweave: 1', `id: ${id}`, `type: ${type}`, `title: ${id}`, 'source:', '  kind: inline'];
   if (ingredients.length) {
     L.push('recipe:', `  ingredients: [${ingredients.join(', ')}]`, `  build: derive ${id} from ${ingredients.join('+')}`);
   }
@@ -117,8 +117,8 @@ function makeFixture(name) {
   mkdirSync(join(work, 'docs', 'trace'), { recursive: true });
   // consumer shape: proposals gitignored (the dogfood repo does this — it
   // broke the original -A + :(exclude) add; the fixture keeps the guard)
-  writeFileSync(join(work, '.gitignore'), '.traceweave/proposals/\n', 'utf8');
-  writeFileSync(join(work, 'traceweave.yml'), CONFIG, 'utf8');
+  writeFileSync(join(work, '.gitignore'), '.canonweave/proposals/\n', 'utf8');
+  writeFileSync(join(work, 'canonweave.yml'), CONFIG, 'utf8');
   writeFileSync(join(work, 'docs', 'trace', 'ontology.yml'), ONTOLOGY, 'utf8');
   art(work, { id: 'root', type: 'root', body: 'ROOT-v1' });
   const fp1 = fpBody('ROOT-v1');
@@ -191,7 +191,7 @@ const fx = makeFixture('fixA');
   const r = await runAction(fx.work);
   check('clean graph -> exit 0, result=clean, zero PRs', r.status === 0 && out(r, 'result') === 'clean' && out(r, 'suspects') === '0');
   const branches = g(fx.origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads');
-  check('clean graph -> no reconcile branches pushed', !branches.includes('traceweave/reconcile/'));
+  check('clean graph -> no reconcile branches pushed', !branches.includes('canonweave/reconcile/'));
 }
 
 // 3. suspect -> branch + PR; the branch gates green (merge-is-review proof)
@@ -204,8 +204,8 @@ let branchA = null;
   const r = await runAction(fx.work);
   check('suspect downstream -> exit 0, one PR created', r.status === 0 && out(r, 'prs-created') === '1' && out(r, 'result') === 'ok', `status=${r.status} created=${out(r, 'prs-created')}`);
   const branches = g(fx.origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n');
-  branchA = branches.find((b) => b.startsWith('traceweave/reconcile/child--'));
-  check('idempotency-key branch pushed: traceweave/reconcile/child--<fp8>', !!branchA, branches.join(','));
+  branchA = branches.find((b) => b.startsWith('canonweave/reconcile/child--'));
+  check('idempotency-key branch pushed: canonweave/reconcile/child--<fp8>', !!branchA, branches.join(','));
   const post = apiLog.find((l) => l.method === 'POST' && /\/pulls$/.test(l.url.split('?')[0]));
   const postBody = post ? JSON.parse(post.body) : {};
   check('PR created against base main with the reconcile head', post && postBody.base === 'main' && postBody.head === branchA);
@@ -230,7 +230,7 @@ let branchA = null;
   check('re-run updates the open PR instead of duplicating', r.status === 0 && out(r, 'prs-updated') === '1' && out(r, 'prs-created') === '0');
   const posts = apiLog.filter((l) => l.method === 'POST' && /\/pulls$/.test(l.url.split('?')[0]));
   check('re-run performs zero PR-create calls', posts.length === 0);
-  const openForChild = prStore.filter((p) => p.state === 'open' && p.head.ref.startsWith('traceweave/reconcile/child--'));
+  const openForChild = prStore.filter((p) => p.state === 'open' && p.head.ref.startsWith('canonweave/reconcile/child--'));
   check('exactly one open reconcile PR for the downstream', openForChild.length === 1);
 }
 
@@ -248,21 +248,21 @@ let branchA = null;
   check('stale PR got a successor-link comment', comment && /Superseded by #\d+/.test(JSON.parse(comment.body).body));
   const del = apiLog.find((l) => l.method === 'DELETE' && /\/git\/refs\/heads\//.test(l.url));
   check('stale branch ref deleted', !!del);
-  const openForChild = prStore.filter((p) => p.state === 'open' && p.head.ref.startsWith('traceweave/reconcile/child--'));
+  const openForChild = prStore.filter((p) => p.state === 'open' && p.head.ref.startsWith('canonweave/reconcile/child--'));
   check('succession leaves exactly one open PR', openForChild.length === 1);
 }
 
 // 6. brief mode (backend none) -> no PR, surfaced in summary
 {
   const fb = makeFixture('fixB');
-  writeFileSync(join(fb.work, 'traceweave.yml'), CONFIG.replace('backend: template', 'backend: none'), 'utf8');
+  writeFileSync(join(fb.work, 'canonweave.yml'), CONFIG.replace('backend: template', 'backend: none'), 'utf8');
   art(fb.work, { id: 'root', type: 'root', body: 'ROOT-vX' });
   g(fb.work, 'add', '-A'); g(fb.work, 'commit', '-q', '-m', 'upstream + brief config');
   const before = prStore.length;
   const r = await runAction(fb.work);
   check('brief mode -> exit 0, briefs=1, zero PRs', r.status === 0 && out(r, 'briefs') === '1' && out(r, 'prs-created') === '0');
   check('brief surfaced in the job summary', /brief/.test(r.summary));
-  check('brief mode pushed no branches', !g(fb.origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').includes('traceweave/reconcile/'));
+  check('brief mode pushed no branches', !g(fb.origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').includes('canonweave/reconcile/'));
   check('brief mode created no PR objects', prStore.length === before);
 }
 
@@ -272,7 +272,7 @@ let branchA = null;
   const work = join(ROOT, name, 'work');
   const origin = join(ROOT, name, 'origin.git');
   mkdirSync(join(work, 'docs', 'trace'), { recursive: true });
-  writeFileSync(join(work, '.gitignore'), '.traceweave/proposals/\n', 'utf8');
+  writeFileSync(join(work, '.gitignore'), '.canonweave/proposals/\n', 'utf8');
   const ONTO3 = [
     'version: 1', 'tiers: [base, mid, leaf]', 'types:',
     '  root:', '    tier: base', '    ingredients: []',
@@ -280,7 +280,7 @@ let branchA = null;
     '  leaf:', '    tier: leaf', '    ingredients: [mid]',
     'profiles:', '  core:', '    required: [root, mid, leaf]', '',
   ].join('\n');
-  writeFileSync(join(work, 'traceweave.yml'), CONFIG, 'utf8');
+  writeFileSync(join(work, 'canonweave.yml'), CONFIG, 'utf8');
   writeFileSync(join(work, 'docs', 'trace', 'ontology.yml'), ONTO3, 'utf8');
   art(work, { id: 'root', type: 'root', body: 'R1' });
   art(work, { id: 'mid', type: 'mid', body: 'M1', ingredients: ['root'], reconciled: { root: fpBody('R1') } });
@@ -299,7 +299,7 @@ let branchA = null;
   // wave 1: only the DIRECT dependent (mid) is drafted
   const w1 = await runAction(work);
   check('cascade wave 1: only the direct dependent gets a PR', w1.status === 0 && out(w1, 'downstreams') === '1' && out(w1, 'prs-created') === '1');
-  const wave1Branch = g(origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').find((x) => x.startsWith('traceweave/reconcile/mid--'));
+  const wave1Branch = g(origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').find((x) => x.startsWith('canonweave/reconcile/mid--'));
   check('cascade wave 1: branch is for mid', !!wave1Branch, wave1Branch || '(none)');
 
   // merge wave 1 (fast-forward the reconcile commit onto main) -> leaf goes suspect
@@ -307,7 +307,7 @@ let branchA = null;
   g(work, 'merge', '-q', '--ff-only', 'FETCH_HEAD');
   const w2 = await runAction(work);
   check('cascade wave 2: merging surfaced the NEXT tier (leaf) and drafted it', w2.status === 0 && out(w2, 'prs-created') === '1');
-  const wave2Branch = g(origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').find((x) => x.startsWith('traceweave/reconcile/leaf--'));
+  const wave2Branch = g(origin, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').find((x) => x.startsWith('canonweave/reconcile/leaf--'));
   check('cascade wave 2: branch is for leaf', !!wave2Branch, wave2Branch || '(none)');
 
   // merge wave 2 -> the chain is fully re-reviewed, gate green, reconcile no-ops
