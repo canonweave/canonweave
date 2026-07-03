@@ -25,7 +25,7 @@ the repo is private on the free plan).
 4. Enable private vulnerability reporting + secret scanning (Settings →
    Code security). CodeQL + Scorecard start running on the next push.
 5. First release: bump versions if needed, update CHANGELOG, then
-   `git tag -s v0.1.0 && git push origin v0.1.0` — the release workflow runs
+   `git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0` (annotated; `-s` once a signing key exists) — the release workflow runs
    the suite, packs, publishes `canonweave` with provenance (SLSA statement,
    `npm audit signatures` verifiable), creates the GitHub release with the
    pinned action ref, and moves the `v1` major tag.
@@ -40,7 +40,9 @@ Verify any time: `node scripts/pack-npm.mjs && node dist-npm/packages/cli/bin/ca
 
 ## Pinning contract (what we promise consumers)
 
-- Release tags are signed and immutable; the `v1` major tag moves only across
+- Release tags are immutable (tag signing begins once a release signing key is
+  provisioned; supply-chain attestation today is npm provenance/SLSA on every
+  release); the `v1` major tag moves only across
   backward-compatible releases.
 - The recommended consumption form is always the full commit SHA.
 - Fingerprint/format changes follow the versioned-contract rules in

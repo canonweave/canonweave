@@ -7,6 +7,24 @@ contracts — changing their meaning is a MAJOR (docs/file-format.md).
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-07-03
+
+First public release, as **canonweave** (renamed from the working name
+"traceweave" pre-launch — the old name was crowded on PyPI/GitHub and had no
+clean domain; no released artifact ever shipped under it).
+
+- Engine: artifact graph, body-only fingerprints, suspect propagation,
+  gate profiles (zero-dependency, deterministic; Node 20+)
+- CLI `canonweave`: init/build/check/reconcile/clear + hermetic selftest (83 checks)
+- GitHub gate Action: inline annotations, one sticky PR comment, job summary,
+  fork/no-token degradation, merge-queue-safe (22-check selftest)
+- Reconcile Action (the AI plane): one idempotent fix PR per suspect artifact,
+  merge-as-review, wave convergence; drafter backends: template | cmd | none |
+  anthropic | openai-compatible (proven live with GLM 5.2) (28-check selftest)
+- Templates: generic-software, product-lifecycle; consumer workflows
+  canonweave-gate.yml + canonweave-reconcile.yml
+- Release: single npm package `canonweave` with SLSA provenance
+
 ### Added
 - WS3 — the AI reconcile loop: zero-dep `anthropic` (Messages API) and
   `openai` (OpenAI-compatible `base_url`) drafter backends with layered
