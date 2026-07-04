@@ -7,6 +7,15 @@ contracts — changing their meaning is a MAJOR (docs/file-format.md).
 
 ## [Unreleased]
 
+### Added
+- `serve` (WS6, design §9 — the dashboard): local read-only dashboard over the
+  last built state (`graph.json` + artifact files) at `http://127.0.0.1:8791`
+  (`--port`, `--port 0` for an OS-assigned port). Overview with per-profile
+  gate verdicts, tier-column graph view with derivation edges, suspects, gaps,
+  artifact browser with file content, and the byte-exact `canonweave check`
+  report. GET-only by construction (anything else is 405), loopback-bound with
+  a foreign-Host guard, content-based stale-build banner. Docs: `docs/serve.md`.
+
 ## [0.2.0] — 2026-07-03
 
 ### Added
