@@ -1,7 +1,7 @@
 {
   "name": "@canonweave/reconcile-action",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Canonweave reconcile action \u2014 idempotent AI fix PRs for suspect artifact links (design section 7)",
   "type": "module",
   "main": "index.mjs"

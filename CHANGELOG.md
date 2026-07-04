@@ -7,6 +7,8 @@ contracts — changing their meaning is a MAJOR (docs/file-format.md).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-04
+
 ### Added
 - `serve` (WS6, design §9 — the dashboard): local read-only dashboard over the
   last built state (`graph.json` + artifact files) at `http://127.0.0.1:8791`
