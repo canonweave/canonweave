@@ -6,11 +6,12 @@ import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
 import {
   ConfigError,
   fingerprint,
   loadConfig, loadOntology, loadArtifacts, buildGraph, gateVerdict, assertResolved,
+  renderCheck,
   parseFrontmatter, serializeFrontmatter,
   loadResolverPlugins,
   draft, buildDraftPrompt,
@@ -631,8 +632,14 @@ export async function runSelftest() {
     check('CLI exit 2: unknown verb', rVerb.status === 2, `status=${rVerb.status}`);
     const rWs = runCli(['sync-issues'], gs);
     check('CLI exit 2: sync-issues refuses when sync.issues is false', rWs.status === 2 && /TW_SYNC_DISABLED/.test(rWs.stderr), `status=${rWs.status}`);
-    const rServe = runCli(['serve'], gs);
-    check('CLI exit 2: serve is the explicit WS6 stub', rServe.status === 2 && /WS6/.test(rServe.stderr), `status=${rServe.status}`);
+    const noGraph = join(ROOT, 'serve-nograph');
+    mkdirSync(noGraph, { recursive: true });
+    runCli(['init', '--template', 'generic-software', '--dir', noGraph], ROOT);
+    rmSync(loadConfig(join(noGraph, 'canonweave.yml')).graphPath, { force: true });
+    const rServe = runCli(['serve'], noGraph);
+    check('CLI exit 2: serve without a built graph names the fix',
+      rServe.status === 2 && /TW_SERVE_NO_GRAPH/.test(rServe.stderr) && /canonweave build/.test(rServe.stderr),
+      `status=${rServe.status}`);
     // exit 3 covered in test 10 via the url repo.
   }
 
@@ -833,6 +840,101 @@ export async function runSelftest() {
       r6.status === 0 && /board skipped: no Projects v2 access/.test(r6.stdout), r6.stdout.split('\n').filter((l) => /board/.test(l)).join(''));
 
     gh.close();
+  }
+
+  // ===========================================================================
+  // 13. serve (WS6) — read-only dashboard: spawned child + loopback fetch
+  // ===========================================================================
+  {
+    const repo = join(ROOT, 'serve-repo');
+    mkdirSync(repo, { recursive: true });
+    runCli(['init', '--template', 'generic-software', '--dir', repo], ROOT);
+    const cfg = loadConfig(join(repo, 'canonweave.yml'));
+
+    // The server is long-lived: spawn async and poll the readiness line.
+    // NEVER runCli/execFileSync here — it blocks the parent event loop.
+    const child = spawn(process.execPath, [BIN, 'serve', '--port', '0'], {
+      cwd: repo, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let out = '';
+    child.stdout.on('data', (c) => { out += c; });
+    const base = await new Promise((resolvePromise) => {
+      const startedAt = Date.now();
+      const timer = setInterval(() => {
+        const m = out.match(/http:\/\/127\.0\.0\.1:(\d+)/);
+        if (m) { clearInterval(timer); resolvePromise(m[0]); }
+        else if (Date.now() - startedAt > 15000) { clearInterval(timer); resolvePromise(null); }
+      }, 50);
+    });
+    check('serve: --port 0 binds and prints the readiness URL', !!base, out.slice(0, 160));
+
+    if (base) {
+      const htmlRes = await fetch(`${base}/`);
+      const htmlText = await htmlRes.text();
+      check('serve: / responds 200 text/html', htmlRes.status === 200 && /text\/html/.test(htmlRes.headers.get('content-type') || ''), `status=${htmlRes.status}`);
+      check('serve: / is the canonweave dashboard app', /<title>canonweave/.test(htmlText));
+
+      const state = await (await fetch(`${base}/api/state`)).json();
+      const graphOnDisk = JSON.parse(readFileSync(cfg.graphPath, 'utf8'));
+      check('serve: /api/state mirrors graph.json counts',
+        state.graph.nodes.length === graphOnDisk.nodes.length
+        && state.graph.edges.length === graphOnDisk.edges.length
+        && state.graph.suspects.length === graphOnDisk.suspects.length
+        && state.graph.gaps.length === graphOnDisk.gaps.length);
+      check('serve: report is renderCheck(graph.json) byte-identical', state.report === renderCheck(graphOnDisk));
+
+      // ACCEPTANCE (AIW-234): the dashboard renders state matching the CLI
+      // report exactly — `check` recomputes; on a built, unchanged repo the
+      // two must agree to the byte (modulo console.log's trailing newline).
+      const rCheck = runCli(['check'], repo);
+      check('serve: state matches the CLI report exactly (WS6 acceptance)',
+        rCheck.status === 0 && rCheck.stdout === state.report + '\n');
+
+      const onto = loadOntology(cfg.ontologyPath);
+      check('serve: ontology tier order is served for the dashboard columns',
+        JSON.stringify(state.tiers) === JSON.stringify(onto.tiers));
+      const VOCAB = ['fresh', 'suspect', 'gap', 'placeholder'];
+      check('serve: per-node status uses the board vocabulary (WS4 parity)',
+        Object.keys(state.status).length === state.graph.nodes.length
+        && Object.values(state.status).every((v) => VOCAB.includes(v)));
+      check('serve: fresh build reports stale=false', state.stale === false);
+
+      const firstId = Object.keys(state.artifacts).sort()[0];
+      const art = await (await fetch(`${base}/api/artifact/${firstId}`)).json();
+      const artAbs = join(cfg.repoRoot, ...art.path.split('/'));
+      check('serve: /api/artifact round-trips the file bytes', art.content === readFileSync(artAbs, 'utf8'));
+
+      const missing = await fetch(`${base}/api/artifact/no-such-artifact`);
+      check('serve: unknown artifact id -> 404', missing.status === 404, `status=${missing.status}`);
+      const posted = await fetch(`${base}/api/state`, { method: 'POST', body: '{}' });
+      check('serve: POST -> 405 (read-only by construction)', posted.status === 405, `status=${posted.status}`);
+      const badRoute = await fetch(`${base}/definitely/not/here`);
+      check('serve: unknown route -> 404', badRoute.status === 404, `status=${badRoute.status}`);
+
+      // DNS-rebinding guard: a foreign Host header is rejected. Raw
+      // http.request because fetch normalizes/forbids Host overrides.
+      const badHostStatus = await new Promise((resolvePromise) => {
+        const u = new URL(base);
+        const req = httpRequest(
+          { host: u.hostname, port: u.port, path: '/api/state', headers: { Host: 'evil.example' } },
+          (res) => { res.resume(); resolvePromise(res.statusCode); });
+        req.on('error', () => resolvePromise(-1));
+        req.end();
+      });
+      check('serve: foreign Host header -> 403 (rebinding guard)', badHostStatus === 403, `status=${badHostStatus}`);
+
+      // Live refresh: a local edit flips stale=true on plain re-fetch (the
+      // server re-reads per request — no restart, no cache).
+      writeFileSync(artAbs, readFileSync(artAbs, 'utf8') + '\nlocal-edit\n', 'utf8');
+      const state2 = await (await fetch(`${base}/api/state`)).json();
+      check('serve: local edit flips stale=true without restart', state2.stale === true);
+    }
+
+    child.kill();
+    await new Promise((resolvePromise) => {
+      const t = setTimeout(() => { child.kill('SIGKILL'); resolvePromise(); }, 3000);
+      child.on('close', () => { clearTimeout(t); resolvePromise(); });
+    });
   }
 
   // ---- verdict ---------------------------------------------------------------

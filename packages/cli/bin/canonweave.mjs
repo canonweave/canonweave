@@ -15,6 +15,7 @@ import {
   syncIssues,
 } from '../../engine/src/index.mjs';
 import { runInit, availableTemplates } from '../src/init.mjs';
+import { runServe } from '../src/serve.mjs';
 import { runSelftest } from '../src/selftest.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -44,7 +45,9 @@ function usage() {
     '                                 board — strictly one-way (files are the record). Needs',
     '                                 GITHUB_TOKEN + GITHUB_REPOSITORY; board phase needs a',
     '                                 project-scoped token (CANONWEAVE_PROJECTS_TOKEN).',
-    '  serve                          (ships in WS6 — local read-only dashboard)',
+    '  serve [--port <n>]             Local read-only dashboard (default http://127.0.0.1:8791):',
+    '                                 graph view, suspects, gaps, gate state, artifact browser —',
+    '                                 the state of the last "canonweave build" (graph.json + files).',
     '',
     `Config: nearest ${CONFIG_FILENAME} upward from cwd, or --config <path>.`,
     'Docs: docs/quickstart.md · docs/file-format.md · docs/gate-profiles.md',
@@ -242,8 +245,11 @@ async function main() {
       await syncIssues({ cfg, byId, graph });
       break;
     }
-    case 'serve':
-      throw new ConfigError('TW_NOT_YET', 'serve ships in WS6 (local read-only dashboard)');
+    case 'serve': {
+      const p = popFlag(argv, '--port');
+      await runServe({ cfg: getConfig(cfgFlag.value), port: p.value });
+      break;
+    }
     default:
       throw new ConfigError('TW_CLI_USAGE', `unknown verb: ${verb}\n\n${usage()}`);
   }

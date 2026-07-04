@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>canonweave — dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%274%27 cy=%2712%27 r=%272.6%27 fill=%27%23185fa5%27/%3E%3Ccircle cx=%2712%27 cy=%274%27 r=%272.6%27 fill=%27%233b6d11%27/%3E%3Cpath d=%27M5.8 10.2 L10.2 5.8%27 stroke=%27%235f5e5a%27 stroke-width=%271.6%27/%3E%3C/svg%3E">
+<style>
+:root{
+--bg-primary:#ffffff;--bg-secondary:#f4f3ee;--bg-tertiary:#ecebe5;
+--bg-info:#e6f1fb;--bg-success:#eaf3de;--bg-warning:#faeeda;--bg-danger:#fcebeb;
+--tx-primary:#2c2c2a;--tx-secondary:#5f5e5a;--tx-tertiary:#888780;
+--tx-info:#185fa5;--tx-success:#3b6d11;--tx-warning:#854f0b;--tx-danger:#a32d2d;
+--bd-tertiary:rgba(0,0,0,.12);--bd-secondary:rgba(0,0,0,.26);--bd-info:#378add;--bd-warning:#ba7517;
+--r-md:8px;--r-lg:12px;--mono:ui-monospace,Menlo,Consolas,monospace;}
+*{box-sizing:border-box}
+body{margin:0;background:#fafaf7;color:var(--tx-primary);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding:22px 20px 70px}
+h1{font-size:19px;font-weight:600;margin:0}
+.sub{color:var(--tx-secondary);font-size:13px;margin:2px 0 14px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.tb{display:flex;gap:6px;margin:12px 0 16px;flex-wrap:wrap}
+.tb button{font-size:13px;padding:7px 14px;border:1px solid var(--bd-tertiary);background:#fff;border-radius:var(--r-md);cursor:pointer}
+.tb button.on{border:2px solid var(--bd-info);color:var(--tx-info)}
+.card{background:#fff;border:1px solid var(--bd-tertiary);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:12px}
+.metric{display:inline-block;background:var(--bg-secondary);border-radius:var(--r-md);padding:8px 14px;margin:0 8px 8px 0}
+.metric b{font-size:20px;font-weight:600;display:block}
+.bdg{font-size:12px;padding:2px 9px;border-radius:var(--r-md);white-space:nowrap}
+.bdg.fresh{background:var(--bg-success);color:var(--tx-success)}
+.bdg.suspect{background:var(--bg-warning);color:var(--tx-warning)}
+.bdg.gap{background:var(--bg-danger);color:var(--tx-danger)}
+.bdg.placeholder{background:var(--bg-tertiary);color:var(--tx-tertiary)}
+.bdg.pass{background:var(--bg-success);color:var(--tx-success)}
+.bdg.fail{background:var(--bg-danger);color:var(--tx-danger)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:var(--r-md);margin:2px 4px 2px 0;background:var(--bg-secondary);border:1px solid var(--bd-tertiary)}
+.chip.lnk{background:var(--bg-info);color:var(--tx-info);border:none;cursor:pointer}
+.chip.sus{background:var(--bg-warning);color:var(--tx-warning)}
+.row{display:flex;gap:10px;align-items:center;padding:7px 8px;border-top:1px solid var(--bd-tertiary);cursor:pointer;font-size:13px}.row:hover{background:var(--bg-secondary)}
+.arbk{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--bd-tertiary)}
+.arbk .k{width:122px;flex:none;color:var(--tx-secondary);font-size:13px;padding-top:2px}
+.arbk .v{flex:1;font-size:14px;line-height:1.55;min-width:0}
+.btn{font-size:13px;padding:7px 13px;border:1px solid var(--bd-secondary);border-radius:var(--r-md);background:#fff;cursor:pointer}
+.btn.pri{border-color:var(--bd-info);color:var(--tx-info)}.btn.sm{font-size:12px;padding:4px 9px}
+select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--bd-secondary);border-radius:var(--r-md);background:#fff;color:var(--tx-primary)}
+.fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:13px}
+.node{display:block;width:100%;text-align:left;font-size:12px;padding:6px 8px;margin:6px 0;border:1px solid var(--bd-tertiary);border-radius:var(--r-md);background:#fff;cursor:pointer;position:relative;z-index:1}
+.node.suspect{background:var(--bg-warning);color:var(--tx-warning);border-color:var(--bd-warning)}
+.node.gap{background:var(--bg-danger);color:var(--tx-danger)}
+.node.placeholder{color:var(--tx-tertiary);border-style:dashed}
+.node.sel{border:2px solid var(--bd-info)}
+.node.dim{opacity:.32}
+#gwrap{position:relative}
+#gsvg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0}
+pre{font-family:var(--mono);font-size:12px;line-height:1.5;background:var(--bg-secondary);border:1px solid var(--bd-tertiary);border-radius:var(--r-md);padding:12px 14px;overflow-x:auto;white-space:pre}
+.banner{background:var(--bg-warning);color:var(--tx-warning);border:1px solid var(--bd-warning);border-radius:var(--r-md);padding:8px 12px;font-size:13px;margin-bottom:12px}
+.err{background:var(--bg-danger);color:var(--tx-danger);border-radius:var(--r-md);padding:10px 14px;font-size:13px}
+.mono{font-family:var(--mono)}
+.sechead{font-size:13px;font-weight:600;margin:14px 0 4px}
+</style></head>
+<body><div class="wrap">
+<div class="top"><h1>canonweave</h1><span class="sub" id="hdr" style="margin:0"></span>
+<div class="right"><button class="btn sm" id="refresh">Refresh</button></div></div>
+<p class="sub">Read-only dashboard — state as of the last <span class="mono">canonweave build</span> (graph.json + artifact files). Nothing here writes.</p>
+<div id="stale"></div>
+<div class="tb" id="tabs"></div><div id="view"></div></div>
+<script>
+"use strict";
+var S=null;                                   // /api/state payload
+var UP={},DN={};                              // id -> upstream ids / downstream ids (from edges)
+var st={tab:"Overview",sel:null,gTier:"All",gSus:false,gFocus:"",body:null,bodyFor:null};
+function esc(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function fp8(fp){return fp&&String(fp).indexOf("sha256:")===0?fp.slice(7,15):String(fp||"—")}
+function nodeOf(id){for(var i=0;i<S.graph.nodes.length;i++)if(S.graph.nodes[i].id===id)return S.graph.nodes[i];return null}
+function buildMaps(){UP={};DN={};S.graph.nodes.forEach(function(n){UP[n.id]=[];DN[n.id]=[]});
+S.graph.edges.forEach(function(e){if(DN[e.from]&&DN[e.from].indexOf(e.to)<0)DN[e.from].push(e.to);if(UP[e.to]&&UP[e.to].indexOf(e.from)<0)UP[e.to].push(e.from)})}
+function walk(id,m){var s={},q=(m[id]||[]).slice();while(q.length){var x=q.shift();if(s[x])continue;s[x]=1;(m[x]||[]).forEach(function(y){q.push(y)})}return s}
+function closure(id){var s={};s[id]=1;var d=walk(id,DN),u=walk(id,UP);Object.keys(d).forEach(function(k){s[k]=1});Object.keys(u).forEach(function(k){s[k]=1});return s}
+function byTier(){var t={};S.tiers.forEach(function(n){t[n]=[]});S.graph.nodes.forEach(function(n){(t[n.tier]=t[n.tier]||[]).push(n.id)});Object.keys(t).forEach(function(k){t[k].sort()});return t}
+function statusBadge(id){var s=S.status[id]||"fresh";return '<span class="bdg '+s+'">'+s+'</span>'}
+function chips(ids){if(!ids||!ids.length)return '<span style="color:var(--tx-tertiary)">—</span>';
+return ids.map(function(x){var sus=S.status[x]==="suspect";return '<span class="chip lnk'+(sus?" sus":"")+'" data-go="'+esc(x)+'">'+esc(x)+(S.artifacts[x]&&S.artifacts[x].title!==x?" · "+esc(S.artifacts[x].title):"")+'</span>'}).join("")}
+function tabs(){document.getElementById("tabs").innerHTML=["Overview","Graph","Artifacts","Report"].map(function(t){return '<button class="'+(t===st.tab?"on":"")+'" data-tab="'+t+'">'+t+'</button>'}).join("")}
+function header(){document.getElementById("hdr").innerHTML=esc(S.repo)+' · profile <b>'+esc(S.config.defaultProfile)+'</b> · <span class="mono">'+esc(S.config.graph)+'</span>';
+document.getElementById("stale").innerHTML=S.stale?'<div class="banner">Artifact files changed since the last build — this view may be stale. Run <span class="mono">canonweave build</span>, then Refresh.</div>':""}
+function vOverview(){
+var g=S.graph;var h='<div style="margin-bottom:6px">'
++'<span class="metric"><b>'+g.nodes.length+'</b>artifacts</span>'
++'<span class="metric"><b>'+g.edges.length+'</b>derivation edges</span>'
++'<span class="metric"><b style="color:var(--tx-warning)">'+g.suspects.length+'</b>suspects</span>'
++'<span class="metric"><b style="color:var(--tx-danger)">'+g.gaps.length+'</b>gaps</span></div>';
+h+='<div class="sechead">Gate state</div><div class="card" style="padding:.4rem 1.25rem">';
+Object.keys(g.gates||{}).sort().forEach(function(p){var v=g.gates[p];
+h+='<div class="arbk"><div class="k">'+esc(p)+(p===g.defaultProfile?' <span style="font-size:11px;color:var(--tx-tertiary)">(default)</span>':'')+'</div><div class="v"><span class="bdg '+(v.pass?'pass">PASS':'fail">FAIL')+'</span>'
++(v.pass?'':'<ul style="margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--tx-secondary)">'+v.reasons.map(function(r){return '<li>'+esc(r)+'</li>'}).join("")+'</ul>')+'</div></div>'});
+h+='</div>';
+h+='<div class="sechead">Suspect ingredient links</div>';
+if(!g.suspects.length)h+='<div class="card" style="color:var(--tx-tertiary);font-size:13px">none — all reconciled links are fresh</div>';
+else{h+='<div class="card" style="padding:.4rem 1.25rem">';g.suspects.forEach(function(s){
+h+='<div class="arbk"><div class="k"><span class="chip lnk sus" data-go="'+esc(s.node)+'">'+esc(s.node)+'</span></div><div class="v" style="font-size:13px">&larr; <span class="chip lnk" data-go="'+esc(s.ingredient)+'">'+esc(s.ingredient)+'</span><br><span class="mono" style="font-size:11px;color:var(--tx-secondary)">reconciled '+fp8(s.expected)+' &rarr; current '+fp8(s.actual)+'</span></div></div>'});h+='</div>'}
+h+='<div class="sechead">Coverage gaps <span style="font-weight:400;color:var(--tx-tertiary)">(profile '+esc(g.defaultProfile)+')</span></div>';
+if(!g.gaps.length)h+='<div class="card" style="color:var(--tx-tertiary);font-size:13px">none — every required artifact is present and resolved</div>';
+else{h+='<div class="card" style="padding:.4rem 1.25rem">';g.gaps.forEach(function(x){
+h+='<div class="arbk"><div class="k">'+esc(x.type)+'</div><div class="v" style="font-size:13px">'+(x.id?'<span class="chip lnk" data-go="'+esc(x.id)+'">'+esc(x.id)+'</span> ':'')+esc(x.reason)+'</div></div>'});h+='</div>'}
+return h}
+function vGraph(){
+var focus=st.gFocus&&nodeOf(st.gFocus)?st.gFocus:"";var cset=focus?closure(focus):null;
+var ids=S.graph.nodes.map(function(n){return n.id}).sort();
+var opts='<option value="">— focus one artifact’s chain —</option>'+ids.map(function(k){return '<option value="'+esc(k)+'"'+(k===focus?' selected':'')+'>'+esc(k)+'</option>'}).join("");
+var tsel='<option'+(st.gTier==="All"?' selected':'')+'>All</option>'+S.tiers.map(function(o){return '<option'+(o===st.gTier?' selected':'')+'>'+esc(o)+'</option>'}).join("");
+var bar='<div class="fbar"><label>Tier <select id="g_tier" style="width:auto">'+tsel+'</select></label>'
++'<button class="btn sm'+(st.gSus?' pri':'')+'" data-act="gsus">'+(st.gSus?'✓ ':'')+'Suspect only</button>'
++'<label>Focus <select id="g_focus" style="width:auto;max-width:240px">'+opts+'</select></label>'
++(focus?'<button class="btn sm" data-act="gclear">clear focus</button>':'')+'</div>';
+var legend='<div style="font-size:12px;color:var(--tx-secondary);margin-bottom:6px">'+(focus?('Chain of <b>'+esc(focus)+'</b> — upstream and downstream; lines = derivation, amber = suspect.'):'Columns are ontology tiers; lines are derivation edges (upstream &rarr; downstream). Click a node to open it.')+'</div>';
+var cols=S.tiers.filter(function(tn){return st.gTier==="All"||st.gTier===tn});
+var t=byTier();
+var body=cols.map(function(tn){var list=(t[tn]||[]).filter(function(k){if(cset&&!cset[k])return false;if(st.gSus&&S.status[k]!=="suspect")return false;return true});
+return '<div style="flex:1;min-width:130px"><div style="font-size:12px;color:var(--tx-secondary);margin-bottom:2px">'+esc(tn)+' <span style="color:var(--tx-tertiary)">'+list.length+'</span></div>'
++list.map(function(id){var dim=focus&&!cset[id];return '<button class="node '+(S.status[id]||'')+(id===st.sel?" sel":"")+(dim?" dim":"")+'" data-go="'+esc(id)+'" data-id="'+esc(id)+'">'+esc(id)+(S.artifacts[id]&&S.artifacts[id].title!==id?'<br><span style="font-size:11px;color:var(--tx-tertiary)">'+esc(S.artifacts[id].title)+'</span>':'')+'</button>'}).join("")+'</div>'}).join('<div style="width:14px;flex:none"></div>');
+return bar+legend+'<div id="gwrap"><svg id="gsvg"></svg><div style="display:flex;position:relative;z-index:1">'+body+'</div></div>'}
+function drawEdges(){var wrap=document.getElementById('gwrap');var svg=document.getElementById('gsvg');if(!wrap||!svg)return;
+var focus=st.gFocus&&nodeOf(st.gFocus)?st.gFocus:"";var cset=focus?closure(focus):null;
+var pairs=[];S.graph.edges.forEach(function(e){if(focus&&!(cset[e.from]&&cset[e.to]))return;pairs.push([e.from,e.to])});
+svg.setAttribute('width',wrap.scrollWidth);svg.setAttribute('height',wrap.scrollHeight);
+var wr=wrap.getBoundingClientRect();var paths='';
+pairs.forEach(function(pr){var a=wrap.querySelector('[data-id="'+pr[0]+'"]'),b=wrap.querySelector('[data-id="'+pr[1]+'"]');if(!a||!b)return;
+var ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+var x1=ra.right-wr.left,y1=ra.top-wr.top+ra.height/2,x2=rb.left-wr.left,y2=rb.top-wr.top+rb.height/2,mx=(x1+x2)/2;
+var sus=(nodeOf(pr[1]).suspectIngredients||[]).indexOf(pr[0])>=0;
+paths+='<path d="M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2+'" fill="none" stroke="'+(sus?'#ba7517':'rgba(0,0,0,.18)')+'" stroke-width="'+(sus?2:1.2)+'"/>'});
+svg.innerHTML=paths}
+function loadBody(id){if(st.bodyFor===id)return;st.bodyFor=id;st.body=null;
+fetch('/api/artifact/'+encodeURIComponent(id)).then(function(r){return r.json()}).then(function(j){if(st.bodyFor!==id)return;st.body=j;var el=document.getElementById('abody');if(el)el.innerHTML=j.content!=null?'<pre>'+esc(j.content)+'</pre>':'<div class="err">'+esc(j.message||'failed to read file')+'</div>'})
+.catch(function(e){var el=document.getElementById('abody');if(el)el.innerHTML='<div class="err">'+esc(String(e))+'</div>'})}
+function vArtifacts(){
+var t=byTier();var list='';
+S.tiers.forEach(function(tn){var ids=t[tn]||[];if(!ids.length)return;list+='<div style="font-size:13px;font-weight:600;margin:14px 0 2px">'+esc(tn)+'</div>';
+ids.forEach(function(id){list+='<div class="row" data-go="'+esc(id)+'"><span class="mono" style="font-size:11px;color:var(--tx-secondary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(id)+'</span><span style="flex:1.4;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(S.artifacts[id]?S.artifacts[id].title:id)+'</span><span class="bdg" style="background:var(--bg-secondary)">'+esc(nodeOf(id).type)+'</span>'+statusBadge(id)+'</div>'})});
+if(!st.sel||!nodeOf(st.sel))return list;
+var n=nodeOf(st.sel);var a=S.artifacts[st.sel]||{path:"?",title:st.sel};
+loadBody(st.sel);
+var rows=[
+['Type','<span class="chip">'+esc(n.type)+'</span>'],
+['Tier','<span class="chip">'+esc(n.tier)+'</span>'],
+['Status','<span class="chip">'+esc(n.status)+'</span> '+statusBadge(st.sel)],
+['File','<span class="mono" style="font-size:12px">'+esc(a.path)+'</span>'],
+['Source','<span class="chip">'+esc(n.source&&n.source.kind||'inline')+'</span>'],
+['Fingerprint','<span class="mono" style="font-size:12px">'+esc(fp8(n.fingerprint))+'</span>'+(n.unresolved?' <span class="bdg gap">unresolved</span> <span style="font-size:12px;color:var(--tx-danger)">'+esc(n.resolveError||'')+'</span>':'')],
+['Derives from',chips(UP[st.sel])],
+['Feeds into',chips(DN[st.sel])],
+['Issue',n.provenance&&n.provenance.issue?'<span class="chip">#'+esc(n.provenance.issue)+'</span>':'<span style="color:var(--tx-tertiary)">not projected</span>'],
+['Change impact',(S.status[st.sel]==="suspect")?'<span style="color:var(--tx-warning)">suspect — an upstream changed since the last reconcile ('+(n.suspectIngredients||[]).map(esc).join(", ")+')</span>':'<span style="color:var(--tx-secondary)">'+Object.keys(walk(st.sel,DN)).length+' downstream artifact(s) inherit changes here</span>']];
+var detail='<div class="card" style="margin-top:16px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:2px"><span class="mono" style="font-size:12px;color:var(--tx-secondary)">'+esc(st.sel)+'</span><span style="font-size:18px;font-weight:600;flex:1">'+esc(a.title)+'</span>'+statusBadge(st.sel)+'</div>'
++rows.map(function(r){return '<div class="arbk"><div class="k">'+r[0]+'</div><div class="v">'+r[1]+'</div></div>'}).join("")
++'<div style="margin-top:14px"><button class="btn sm" data-act="focusg">View in graph</button></div>'
++'<div class="sechead">File content</div><div id="abody">'+(st.body&&st.bodyFor===st.sel?'<pre>'+esc(st.body.content)+'</pre>':'<span style="color:var(--tx-tertiary);font-size:13px">loading…</span>')+'</div></div>';
+return list+detail}
+function vReport(){return '<div style="font-size:12px;color:var(--tx-secondary);margin-bottom:6px">Byte-exact output of <span class="mono">canonweave check</span> for the built graph.</div><pre>'+esc(S.report)+'</pre>'}
+function render(){tabs();header();
+var v=document.getElementById("view");
+v.innerHTML=st.tab==="Overview"?vOverview():st.tab==="Graph"?vGraph():st.tab==="Artifacts"?vArtifacts():vReport();
+if(st.tab==="Graph")requestAnimationFrame(drawEdges)}
+function go(id){st.sel=id;st.tab="Artifacts";render();var d=document.querySelector('.card[style*="margin-top"]');if(d)d.scrollIntoView({behavior:"smooth",block:"start"})}
+document.addEventListener("click",function(ev){
+var t=ev.target.closest("[data-tab],[data-go],[data-act],#refresh");if(!t)return;
+if(t.id==="refresh")return load();
+if(t.dataset.tab){st.tab=t.dataset.tab;render();return}
+if(t.dataset.go){go(t.dataset.go);return}
+if(t.dataset.act==="gsus"){st.gSus=!st.gSus;render();return}
+if(t.dataset.act==="gclear"){st.gFocus="";render();return}
+if(t.dataset.act==="focusg"){st.gFocus=st.sel;st.tab="Graph";render();return}});
+document.addEventListener("change",function(ev){
+if(ev.target.id==="g_tier"){st.gTier=ev.target.value;render()}
+if(ev.target.id==="g_focus"){st.gFocus=ev.target.value;render()}});
+window.addEventListener("resize",function(){if(st.tab==="Graph")drawEdges()});
+function load(){document.getElementById("view").innerHTML='<div class="sub">loading…</div>';
+fetch('/api/state').then(function(r){return r.json()}).then(function(j){
+if(j&&j.error){document.getElementById("view").innerHTML='<div class="err"><b>'+esc(j.error)+'</b> — '+esc(j.message)+'</div>';return}
+S=j;buildMaps();st.body=null;st.bodyFor=null;
+if(!st.sel&&S.graph.nodes.length)st.sel=S.graph.nodes[0].id;
+render()})
+.catch(function(e){document.getElementById("view").innerHTML='<div class="err">failed to load /api/state — '+esc(String(e))+'</div>'})}
+load();
+</script>
+</body></html>
