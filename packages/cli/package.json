@@ -1,7 +1,7 @@
 {
   "name": "canonweave",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Canonweave CLI \u2014 init, build, check, gate, fingerprint, clear, reconcile, selftest. Zero runtime dependencies.",
   "type": "module",
   "bin": {

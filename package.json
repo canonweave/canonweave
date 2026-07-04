@@ -1,7 +1,7 @@
 {
   "name": "canonweave-monorepo",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Canonweave \u2014 GitHub-native artifact traceability: files as the system of record, deterministic derivation graph, suspect links, AI reconcile behind a human PR gate.",
   "type": "module",
   "workspaces": [
