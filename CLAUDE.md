@@ -1,16 +1,3 @@
-<!-- managed-by: codex_harness_sync.sh; source: Claude project harness -->
-<!-- claude-project-parity:begin -->
-## Claude project parity layer
-
-Claude Code is the shared project source of truth. Codex-specific instructions outside this block may specialize runtime behavior; shared safety, routing, and domain rules below remain binding.
-
-Mirrored from:
-- `CLAUDE.md`
-
----
-
-### CLAUDE.md
-
 # AGENTS.md — working on canonweave with an AI agent
 
 Facts an agent needs before touching this repo:
@@ -45,5 +32,3 @@ Facts an agent needs before touching this repo:
   heuristic provenance live in a private downstream package; the OSS core
   ships `inline`/`repo`/`url` + the plugin seam only.
 - Docs are contracts: behavior changes update `docs/` in the same change.
-
-<!-- claude-project-parity:end -->
