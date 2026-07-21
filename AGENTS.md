@@ -1,4 +1,32 @@
 <!-- managed-by: codex_harness_sync.sh; source: Claude project harness -->
+<!-- kimi-harness-bridge:begin generated-by: claude-brain -->
+## Kimi harness bridge
+
+Kimi Code and Kimi Work are native Moonshot harnesses, not Codex or an OpenAI
+harness. On this repository they must expose the same AI Workforce identity and
+operating rules as Claude Code and Codex.
+
+Before substantive research, validation, planning, or implementation in Kimi:
+
+1. Read the repository-root `CLAUDE.md` completely. It is the canonical project
+   harness even when the mirrored content later in this `AGENTS.md` is truncated.
+2. Read `.agents/kimi_global_instructions.md` from the repository root. It is a
+   generated, audited projection of the canonical user-level Claude harness and
+   rules. Resolve the repository root from the nearest `.git` directory first.
+3. Discover relevant project workflows under `.agents/skills/`; read the full
+   `SKILL.md` before using one. Kimi Code loads these automatically. Kimi Work
+   must inspect this directory when the task matches a project skill.
+4. Translate harness-specific tool names into Kimi's native tools while
+   preserving the requested outcome, safety boundary, verification, and project
+   ownership. Native implementation details may differ; project meaning may not.
+5. Keep Kimi OAuth credentials, device identity, app-generated provider keys,
+   sessions, logs, and UI state machine-local. Never add them to the repository.
+
+If either canonical instruction file is missing, report a harness-sync error
+instead of inventing project identity or continuing with a partial harness.
+<!-- kimi-harness-bridge:end -->
+
+
 <!-- claude-project-parity:begin -->
 ## Claude project parity layer
 
